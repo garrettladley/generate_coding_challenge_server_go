@@ -30,14 +30,12 @@ func newFiberServer(lc fx.Lifecycle, applicantHandlers *handlers.ApplicantHandle
 
 	app.Get("/swagger/*", swagger.HandlerDefault)
 
-	userGroup := app.Group("/applicant")
-	userGroup.Post("/register", applicantHandlers.Register)
-	userGroup.Get("/forgot_token/:nuid", applicantHandlers.ForgotToken)
-	userGroup.Get("/challenge/:token", applicantHandlers.Challenge)
-	userGroup.Post("/submit", applicantHandlers.Submit)
+	app.Post("/register", applicantHandlers.Register)
+	app.Get("/forgot_token/:nuid", applicantHandlers.ForgotToken)
+	app.Get("/challenge/:token", applicantHandlers.Challenge)
+	app.Post("/submit", applicantHandlers.Submit)
 
-	adminGroup := app.Group("/admin")
-	adminGroup.Get("/applicants", adminHandlers.Applicants)
+	app.Get("/applicants", adminHandlers.Applicants)
 
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {
