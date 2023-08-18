@@ -54,13 +54,12 @@ func newFiberServer(lc fx.Lifecycle, applicantHandlers *handlers.ApplicantHandle
 func main() {
 	fx.New(
 		fx.Provide(
-			config.LoadEnv,
+			config.GetConfiguration,
+			db.CreatePostgresConnection,
 			storage.NewAdminStorage,
 			handlers.NewAdminHandler,
-			db.CreateMySqlConnection,
 			storage.NewApplicantStorage,
 			handlers.NewApplicantHandler,
-			db.CreateRedisConnection,
 		),
 		fx.Invoke(newFiberServer),
 	).Run()

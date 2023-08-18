@@ -13,10 +13,6 @@ func NewAdminHandler(storage *storage.AdminStorage) *AdminHandler {
 	return (*AdminHandler)(storage)
 }
 
-type getApplicantsRequestBody struct {
-	RawNUIDs []string
-}
-
 // Applicants godoc
 // @Summary Get the status of the provided applicants
 // @Tags users
@@ -25,20 +21,21 @@ type getApplicantsRequestBody struct {
 // @Success 200 {object} storage.GetApplicantsResult
 // @Router /admin/applicants [get]
 func (u *AdminHandler) Applicants(c *fiber.Ctx) error {
-	var applicants getApplicantsRequestBody
+	var rawNUIDs []string
 
-	err := c.BodyParser(&applicants)
+	err := c.BodyParser(&rawNUIDs)
 	if err != nil {
 		return err
 	}
 
-	nuids := make([]domain.NUID, len(applicants.RawNUIDs))
-	for _, rawNUID := range applicants.RawNUIDs {
+	nuids := make([]domain.NUID, len(rawNUIDs))
+
+	for idx, rawNUID := range rawNUIDs {
 		nuid, err := domain.ParseNUID(rawNUID)
 		if err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, "invalid nuid %s", rawNUID)
 		}
-		nuids = append(nuids, *nuid)
+		nuids[idx] = *nuid
 	}
 
 	result, err := (*storage.AdminStorage)(u).GetApplicants(nuids)
