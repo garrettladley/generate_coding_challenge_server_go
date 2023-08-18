@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
@@ -55,7 +56,7 @@ func (s *AdminStorage) GetApplicants(nuids []domain.NUID) (GetApplicantsResult, 
 	for _, applicant := range applicantsFoundDB {
 		applicantFound, err := processApplicantFoundDB(applicant)
 		if err != nil {
-			return GetApplicantsResult{}, err
+			return GetApplicantsResult{}, fmt.Errorf("invalid database state!. Error: %v", err)
 		}
 		applicantsFound = append(applicantsFound, applicantFound)
 	}
