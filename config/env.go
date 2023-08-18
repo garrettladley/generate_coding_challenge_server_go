@@ -22,6 +22,7 @@ func LoadEnv() EnvVars {
 	redis_pass := os.Getenv("REDIS_PASSWORD")
 	redis_db := os.Getenv("REDIS_DB")
 	parsed_redis_db, err := strconv.Atoi(redis_db)
+
 	if err != nil {
 		panic("cannot parse redis DB number")
 	}
