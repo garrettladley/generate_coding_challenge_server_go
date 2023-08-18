@@ -1,6 +1,6 @@
 package domain
 
-type RegisterApplicant struct {
+type Applicant struct {
 	NUID NUID
 	Name ApplicantName
 }
