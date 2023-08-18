@@ -49,5 +49,4 @@ func (u *AdminHandler) Applicants(c *fiber.Ctx) error {
 	} else {
 		return c.JSON(result)
 	}
-
 }
