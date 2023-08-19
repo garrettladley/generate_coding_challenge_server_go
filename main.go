@@ -13,16 +13,19 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/swagger"
-
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/gofiber/swagger"
 )
 
-func newFiberServer(lc fx.Lifecycle, applicantHandlers *handlers.ApplicantHandler, adminHandlers *handlers.AdminHandler) *fiber.App {
+func newFiberServer(lc fx.Lifecycle, settings config.Settings, applicantHandlers *handlers.ApplicantHandler, adminHandlers *handlers.AdminHandler) *fiber.App {
 	app := fiber.New()
 
 	app.Use(cors.New())
-	app.Use(logger.New())
+	app.Use(requestid.New())
+	app.Use(logger.New(logger.Config{
+		Format: "[${time}] ${ip}:${port} ${pid} ${locals:requestid} ${status} - ${latency} ${method} ${path}\n",
+	}))
 
 	app.Get("/health_check", func(c *fiber.Ctx) error {
 		return c.SendStatus(200)
@@ -39,8 +42,7 @@ func newFiberServer(lc fx.Lifecycle, applicantHandlers *handlers.ApplicantHandle
 
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {
-			fmt.Println("Starting fiber server on port 8080")
-			go app.Listen(":8080")
+			go app.Listen(fmt.Sprintf(":%d", settings.Application.Port))
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
