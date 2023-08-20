@@ -2,8 +2,9 @@ package storage
 
 import (
 	"database/sql"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
@@ -21,23 +22,10 @@ func NewApplicantStorage(conn *sqlx.DB) *ApplicantStorage {
 }
 
 type RegisterApplicantResponse struct {
-	Token      uuid.UUID `json:"-"`
-	Message    string    `json:"message,omitempty"`
-	HttpStatus int       `json:"-"`
-}
-
-func (r RegisterApplicantResponse) MarshalJSON() ([]byte, error) {
-	if r.Token == uuid.Nil {
-		type Alias RegisterApplicantResponse
-		return json.Marshal(&struct {
-			Alias
-			Token string `json:"token,omitempty"`
-		}{
-			Alias: (Alias)(r),
-			Token: "",
-		})
-	}
-	return json.Marshal(&r)
+	Token      *uuid.UUID `json:"token,omitempty"`
+	Challenge  []string   `json:"challenge,omitempty"`
+	Message    string     `json:"message,omitempty"`
+	HttpStatus int        `json:"-"`
 }
 
 func (s *ApplicantStorage) RegisterApplicant(applicant domain.Applicant) (RegisterApplicantResponse, error) {
@@ -49,7 +37,7 @@ func (s *ApplicantStorage) RegisterApplicant(applicant domain.Applicant) (Regist
 	green, _ := domain.Green.String()
 	blue, _ := domain.Blue.String()
 	violet, _ := domain.Violet.String()
-	challenge := domain.GenerateChallenge(applicant.NUID, 100, []string{red, orange, yellow, green, blue, violet})
+	challenge := domain.GenerateChallenge(applicant.NUID, 100, []string{"", red, orange, yellow, green, blue, violet})
 
 	insertSataement := "INSERT INTO applicants (nuid, applicant_name, registration_time, token, challenge, solution) VALUES ($1, $2, $3, $4, $5, $6);"
 	_, err := s.Conn.Exec(insertSataement, applicant.NUID, applicant.Name, registrationTime, token, pq.Array(challenge.Challenge), pq.Array(challenge.Solution))
@@ -62,7 +50,7 @@ func (s *ApplicantStorage) RegisterApplicant(applicant domain.Applicant) (Regist
 		return RegisterApplicantResponse{}, err
 	}
 
-	return RegisterApplicantResponse{Token: token}, nil
+	return RegisterApplicantResponse{Token: &token, Challenge: challenge.Challenge}, nil
 }
 
 type ForgotTokenResponse struct {
@@ -78,7 +66,7 @@ func (s *ApplicantStorage) ForgotToken(nuid domain.NUID) (ForgotTokenResponse, e
 	var dbResult ForgotTokenDB
 	err := s.Conn.Get(&dbResult, "SELECT token FROM applicants WHERE nuid=$1;", nuid)
 
-	if !dbResult.Token.Valid && err != nil {
+	if !dbResult.Token.Valid {
 		return ForgotTokenResponse{HttpStatus: 404}, nil
 	} else if err != nil {
 		return ForgotTokenResponse{}, err
@@ -91,4 +79,129 @@ func (s *ApplicantStorage) ForgotToken(nuid domain.NUID) (ForgotTokenResponse, e
 	}
 
 	return ForgotTokenResponse{Token: token}, nil
+}
+
+type ChallengeResponse struct {
+	Challenge  []string `json:"challenge"`
+	HttpStatus int      `json:"-"`
+}
+
+type ChallengeDB struct {
+	Challenge StringArray `db:"challenge"`
+}
+
+type StringArray []string
+
+func (a *StringArray) Scan(src interface{}) error {
+	if src == nil {
+		*a = nil
+		return nil
+	}
+
+	strArray := strings.Split(string(src.([]byte)), ",")
+	for i, s := range strArray {
+		s = strings.Trim(s, "\"")
+
+		if s == "\\\"" {
+			s = ""
+		}
+
+		strArray[i] = s
+	}
+
+	first := strArray[0]
+	if strings.HasPrefix(first, "{") {
+		strArray[0] = strings.TrimPrefix(first, "{")
+	} else {
+		return errors.New("invalid array format: first element does not start with '{'")
+	}
+
+	lastIndex := len(strArray) - 1
+	last := strArray[lastIndex]
+	if strings.HasSuffix(last, "}") {
+		strArray[lastIndex] = strings.TrimSuffix(last, "}")
+	} else {
+		return errors.New("invalid array format: last element does not end with '}'")
+	}
+
+	*a = strArray
+	return nil
+}
+
+func (s *ApplicantStorage) Challenge(token uuid.UUID) (ChallengeResponse, error) {
+	var dbResult ChallengeDB
+	err := s.Conn.Get(&dbResult, "SELECT challenge FROM applicants WHERE token=$1;", token)
+	if err != nil {
+		return ChallengeResponse{}, err
+	}
+
+	if len(dbResult.Challenge) == 0 {
+		return ChallengeResponse{HttpStatus: 404}, nil
+	}
+
+	return ChallengeResponse{Challenge: dbResult.Challenge}, nil
+}
+
+type SubmitResult struct {
+	Correct    bool
+	HttpStatus int
+}
+type SubmitDB struct {
+	NUID     sql.NullString `db:"nuid"`
+	Solution StringArray    `db:"solution"`
+}
+
+type WriteSubmitDB struct {
+	NUID    domain.NUID
+	Correct bool
+}
+
+func (s *ApplicantStorage) Submit(token uuid.UUID, givenSolution []string) (SubmitResult, error) {
+	var dbResult SubmitDB
+	err := s.Conn.Get(&dbResult, "SELECT nuid, solution FROM applicants WHERE token=$1;", token)
+	if err != nil {
+		return SubmitResult{}, err
+	}
+
+	if !dbResult.NUID.Valid && len(dbResult.Solution) == 0 {
+		return SubmitResult{HttpStatus: 404}, nil
+	}
+
+	nuid, err := domain.ParseNUID(dbResult.NUID.String)
+
+	if err != nil {
+		return SubmitResult{}, fmt.Errorf("invalid database state!. Error: %v", err)
+	}
+
+	correct, err := s.writeSubmit(*nuid, givenSolution, dbResult.Solution)
+
+	if err != nil {
+		return SubmitResult{}, err
+	}
+
+	return SubmitResult{Correct: correct}, nil
+}
+
+func (s *ApplicantStorage) writeSubmit(nuid domain.NUID, givenSolution []string, actualSolution []string) (bool, error) {
+	var correct bool
+	if len(givenSolution) == len(actualSolution) {
+		correct = true
+		for i := range givenSolution {
+			if givenSolution[i] != actualSolution[i] {
+				correct = false
+				break
+			}
+		}
+	} else {
+		correct = false
+	}
+
+	insertStatement := "INSERT INTO submissions (nuid, correct, submission_time) VALUES ($1, $2, $3);"
+	_, err := s.Conn.Exec(insertStatement, nuid, correct, time.Now())
+
+	if err != nil {
+		return correct, err
+	}
+
+	return correct, err
 }

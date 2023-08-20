@@ -15,7 +15,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
-	"github.com/gofiber/swagger"
 )
 
 func newFiberServer(lc fx.Lifecycle, settings config.Settings, applicantHandlers *handlers.ApplicantHandler, adminHandlers *handlers.AdminHandler) *fiber.App {
@@ -31,12 +30,10 @@ func newFiberServer(lc fx.Lifecycle, settings config.Settings, applicantHandlers
 		return c.SendStatus(200)
 	})
 
-	app.Get("/swagger/*", swagger.HandlerDefault)
-
 	app.Post("/register", applicantHandlers.Register)
 	app.Get("/forgot_token/:nuid", applicantHandlers.ForgotToken)
 	app.Get("/challenge/:token", applicantHandlers.Challenge)
-	app.Post("/submit", applicantHandlers.Submit)
+	app.Post("/submit/:token", applicantHandlers.Submit)
 
 	app.Get("/applicant/:nuid", adminHandlers.Applicant)
 

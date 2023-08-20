@@ -15,13 +15,6 @@ func NewAdminHandler(storage *storage.AdminStorage) *AdminHandler {
 	return (*AdminHandler)(storage)
 }
 
-// Applicants godoc
-// @Summary Get the status of the provided applicants
-// @Tags users
-// @Accept json
-// @Produce json
-// @Success 200 {object} storage.GetApplicantResult
-// @Router /admin/applicants [get]
 func (a *AdminHandler) Applicant(c *fiber.Ctx) error {
 	rawNUID := c.Params("nuid")
 
@@ -30,7 +23,7 @@ func (a *AdminHandler) Applicant(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid nuid %s", rawNUID))
 	}
 
-	result, err := (*storage.AdminStorage)(a).GetApplicant(*nuid)
+	result, err := (*storage.AdminStorage)(a).Applicant(*nuid)
 
 	if err != nil {
 		return err

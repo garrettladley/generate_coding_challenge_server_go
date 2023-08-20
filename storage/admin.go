@@ -33,19 +33,36 @@ type ApplicantFound struct {
 }
 
 type GetApplicantResult struct {
-	Message          string        `json:"message,omitempty"`
-	NUID             domain.NUID   `json:"nuid,omitempty"`
-	Correct          bool          `json:"correct,omitempty"`
-	TimeToCompletion time.Duration `json:"time_to_completion,omitempty"`
-	HttpStatus       int           `json:"-"`
+	Message          string               `json:"message,omitempty"`
+	NUID             domain.NUID          `json:"nuid,omitempty"`
+	Name             domain.ApplicantName `json:"name,omitempty"`
+	Correct          *bool                `json:"correct,omitempty"`
+	TimeToCompletion TimeToCompletion     `json:"time_to_completion,omitempty"`
+	HttpStatus       int                  `json:"-"`
 }
 
-func (s *AdminStorage) GetApplicant(nuid domain.NUID) (GetApplicantResult, error) {
+type TimeToCompletion struct {
+	Seconds int `json:"seconds"`
+	Nanos   int `json:"nanos"`
+}
+
+func convert(t time.Duration) TimeToCompletion {
+	return TimeToCompletion{
+		Seconds: int(t.Seconds()),
+		Nanos:   int(t.Nanoseconds()),
+	}
+}
+
+func (s *AdminStorage) Applicant(nuid domain.NUID) (GetApplicantResult, error) {
 	var applicant GetApplicantDB
 	err := s.Conn.Get(&applicant, `
-	SELECT a.nuid, a.applicant_name, s.correct, s.submission_time,a.registration_time 
+	SELECT a.nuid, a.applicant_name, s.correct, s.submission_time, a.registration_time
 	FROM applicants a
-	LEFT JOIN submissions s ON a.nuid = s.nuid 
+	LEFT JOIN (
+		SELECT nuid, correct, submission_time,
+			   ROW_NUMBER() OVER (PARTITION BY nuid ORDER BY submission_time DESC) AS row_num
+		FROM submissions
+	) s ON a.nuid = s.nuid AND s.row_num = 1
 	WHERE a.nuid = $1;
 `, nuid)
 
@@ -66,8 +83,9 @@ func (s *AdminStorage) GetApplicant(nuid domain.NUID) (GetApplicantResult, error
 
 	return GetApplicantResult{
 		NUID:             applicantFound.NUID,
-		Correct:          applicantFound.Correct,
-		TimeToCompletion: applicantFound.TimeToCompletion,
+		Name:             applicantFound.ApplicantName,
+		Correct:          &applicantFound.Correct,
+		TimeToCompletion: convert(applicantFound.TimeToCompletion),
 	}, nil
 }
 

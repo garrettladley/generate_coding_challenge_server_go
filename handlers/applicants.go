@@ -6,6 +6,7 @@ import (
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
 	"github.com/garrettladley/generate_coding_challenge_server_go/storage"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 type ApplicantHandler storage.ApplicantStorage
@@ -74,9 +75,66 @@ func (a *ApplicantHandler) ForgotToken(c *fiber.Ctx) error {
 }
 
 func (a *ApplicantHandler) Challenge(c *fiber.Ctx) error {
-	return c.SendStatus(fiber.StatusOK)
+	rawToken := c.Params("token")
+
+	token, err := uuid.Parse(rawToken)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid token %s", rawToken))
+	}
+
+	result, err := (*storage.ApplicantStorage)(a).Challenge(token)
+
+	if err != nil {
+		return err
+	}
+
+	if result.HttpStatus == 404 {
+		return c.Status(result.HttpStatus).JSON("Record associated with given token not found!")
+	}
+
+	return c.JSON(result)
+}
+
+type SubmitRequestBody []string
+
+type SubmitResponseBody struct {
+	Correct bool   `json:"correct"`
+	Message string `json:"message"`
 }
 
 func (a *ApplicantHandler) Submit(c *fiber.Ctx) error {
-	return c.SendStatus(fiber.StatusOK)
+	rawToken := c.Params("token")
+
+	token, err := uuid.Parse(rawToken)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid token %s", rawToken))
+	}
+
+	var submitRequestBody SubmitRequestBody
+
+	if err := c.BodyParser(&submitRequestBody); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid request body %s", submitRequestBody))
+	}
+
+	result, err := (*storage.ApplicantStorage)(a).Submit(token, submitRequestBody)
+
+	if err != nil {
+		return err
+	}
+
+	if result.HttpStatus == 404 {
+		return c.Status(result.HttpStatus).JSON("Record associated with given token not found!")
+	}
+
+	if result.Correct {
+		return c.JSON(SubmitResponseBody{
+			Correct: result.Correct,
+			Message: "Correct - nice work!",
+		})
+	} else {
+		return c.JSON(SubmitResponseBody{
+			Correct: result.Correct,
+			Message: "Incorrect Solution",
+		})
+	}
 }

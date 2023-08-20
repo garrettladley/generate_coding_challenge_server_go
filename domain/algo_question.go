@@ -51,7 +51,6 @@ func GenerateChallenge(nuid NUID, nRandom int, mandatoryCases []string) Challeng
 		case Deletion:
 			randomCases[i] = colorStr[randomCount:]
 		case Insertion:
-			alphabet := "abcdefghijklmnopqrstuvwxyz"
 			colorChars := []rune(colorStr)
 			randomChars := make([]rune, randomCount)
 			for j := 0; j < randomCount; j++ {
@@ -87,6 +86,9 @@ func GenerateChallenge(nuid NUID, nRandom int, mandatoryCases []string) Challeng
 	}
 
 	allCases := append(mandatoryCases, randomCases...)
+	rand.Shuffle(len(allCases), func(i, j int) {
+		allCases[i], allCases[j] = allCases[j], allCases[i]
+	})
 
 	var answers []string
 	for _, caseColor := range allCases {

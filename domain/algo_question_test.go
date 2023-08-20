@@ -35,7 +35,6 @@ func TestGenerateChallenge(t *testing.T) {
 		if resultStr == "" || err != nil {
 			t.Errorf("Expected valid answer, but got %v %v", resultStr, err)
 		}
-
 	}
 }
 
