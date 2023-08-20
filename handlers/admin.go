@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
 	"github.com/garrettladley/generate_coding_challenge_server_go/storage"
 
@@ -18,35 +20,25 @@ func NewAdminHandler(storage *storage.AdminStorage) *AdminHandler {
 // @Tags users
 // @Accept json
 // @Produce json
-// @Success 200 {object} storage.GetApplicantsResult
+// @Success 200 {object} storage.GetApplicantResult
 // @Router /admin/applicants [get]
-func (u *AdminHandler) Applicants(c *fiber.Ctx) error {
-	var rawNUIDs []string
+func (a *AdminHandler) Applicant(c *fiber.Ctx) error {
+	rawNUID := c.Params("nuid")
 
-	err := c.BodyParser(&rawNUIDs)
+	nuid, err := domain.ParseNUID(rawNUID)
 	if err != nil {
-		return err
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid nuid %s", rawNUID))
 	}
 
-	nuids := make([]domain.NUID, len(rawNUIDs))
-
-	for idx, rawNUID := range rawNUIDs {
-		nuid, err := domain.ParseNUID(rawNUID)
-		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "invalid nuid %s", rawNUID)
-		}
-		nuids[idx] = *nuid
-	}
-
-	result, err := (*storage.AdminStorage)(u).GetApplicants(nuids)
+	result, err := (*storage.AdminStorage)(a).GetApplicant(*nuid)
 
 	if err != nil {
 		return err
 	}
 
-	if len(result.ApplicantsNotFound) != 0 {
-		return c.Status(fiber.StatusNotFound).JSON(result)
-	} else {
-		return c.JSON(result)
+	if result.HttpStatus == 404 {
+		return c.Status(result.HttpStatus).JSON(result)
 	}
+
+	return c.JSON(result)
 }

@@ -38,7 +38,7 @@ func newFiberServer(lc fx.Lifecycle, settings config.Settings, applicantHandlers
 	app.Get("/challenge/:token", applicantHandlers.Challenge)
 	app.Post("/submit", applicantHandlers.Submit)
 
-	app.Get("/applicants", adminHandlers.Applicants)
+	app.Get("/applicant/:nuid", adminHandlers.Applicant)
 
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {

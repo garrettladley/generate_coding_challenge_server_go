@@ -1,4 +1,4 @@
-name: Go
+name: Go CI/CD Pipeline
 
 on:
   push:
@@ -9,17 +9,40 @@ on:
       - main
 
 jobs:
-  test:
+  format:
+    name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Enforce formatting
+        run: gofmt -l . | grep ".go$" | xargs -r echo "Files not formatted:"
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Enforce linting
+        run: go vet ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v2
         with:
-          go-version: "1.20"
+          go-version: 1.20
       - name: Install dependencies
         run: go get .
       - name: Build
         run: go build -v ./...
-      - name: Test
-        run: go test -v ./...
+      - name: Run Tests with Coverage
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - name: Print Coverage
+        run: |
+          go tool cover -func=coverage.txt
