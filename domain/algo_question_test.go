@@ -23,7 +23,7 @@ func TestGenerateChallenge(t *testing.T) {
 	}
 	nMandatory := len(mandatoryCases)
 	nRandom := 10
-	challenge := GenerateChallenge("001234567", nRandom, mandatoryCases)
+	challenge := GenerateChallenge(nRandom, mandatoryCases)
 
 	if len(challenge.Challenge) != nMandatory+nRandom {
 		t.Errorf("Expected challenge length: %d, got: %d", nMandatory+nRandom, len(challenge.Challenge))

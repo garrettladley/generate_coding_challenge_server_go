@@ -37,7 +37,7 @@ func (s *ApplicantStorage) RegisterApplicant(applicant domain.Applicant) (Regist
 	green, _ := domain.Green.String()
 	blue, _ := domain.Blue.String()
 	violet, _ := domain.Violet.String()
-	challenge := domain.GenerateChallenge(applicant.NUID, 100, []string{"", red, orange, yellow, green, blue, violet})
+	challenge := domain.GenerateChallenge(100, []string{"", red, orange, yellow, green, blue, violet})
 
 	insertSataement := "INSERT INTO applicants (nuid, applicant_name, registration_time, token, challenge, solution) VALUES ($1, $2, $3, $4, $5, $6);"
 	_, err := s.Conn.Exec(insertSataement, applicant.NUID, applicant.Name, registrationTime, token, pq.Array(challenge.Challenge), pq.Array(challenge.Solution))

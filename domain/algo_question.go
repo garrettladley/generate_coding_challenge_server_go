@@ -1,10 +1,11 @@
 package domain
 
 import (
+	crand "crypto/rand"
 	"fmt"
-	"hash/fnv"
 	"math"
-	"math/rand"
+	"math/big"
+	mrand "math/rand"
 )
 
 type Challenge struct {
@@ -28,53 +29,58 @@ func EditTypes() []EditType {
 	}
 }
 
-func GenerateChallenge(nuid NUID, nRandom int, mandatoryCases []string) Challenge {
-	rng := rand.New(rand.NewSource(int64(hashCode(nuid.String()))))
+func GenerateChallenge(nRandom int, mandatoryCases []string) Challenge {
 	randomCases := make([]string, nRandom)
 	colors := Colors()
 	editTypes := EditTypes()
 	alphabet := "abcdefghijklmnopqrstuvwxyz"
 
 	for i := 0; i < nRandom; i++ {
-		color := colors[rng.Intn(len(colors))]
+		randColorIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(len(colors))))
+		color := colors[randColorIdx.Int64()]
 		colorStr, _ := color.String()
 		lenColor := len(colorStr)
-		randomCount := rng.Intn(lenColor + 1)
-		if randomCount == 0 {
+		randomCount, _ := crand.Int(crand.Reader, big.NewInt(int64(lenColor+1)))
+		if randomCount.Int64() == 0 {
 			randomCases[i] = colorStr
 			continue
 		}
 
-		editType := editTypes[rng.Intn(len(editTypes))]
+		randEditTypeIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(len(editTypes))))
+		editType := editTypes[randEditTypeIdx.Int64()]
 
 		switch editType {
 		case Deletion:
-			randomCases[i] = colorStr[randomCount:]
+			randomCases[i] = colorStr[randomCount.Int64():]
 		case Insertion:
 			colorChars := []rune(colorStr)
-			randomChars := make([]rune, randomCount)
-			for j := 0; j < randomCount; j++ {
-				randomChars[j] = rune(alphabet[rng.Intn(len(alphabet))])
+			randomChars := make([]rune, randomCount.Int64())
+			for j := 0; j < int(randomCount.Int64()); j++ {
+				randomCharIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(len(alphabet))))
+				randomChars[j] = rune(alphabet[randomCharIdx.Int64()])
 			}
-			randomIndices := make([]int, randomCount)
-			for j := 0; j < randomCount; j++ {
-				randomIndices[j] = rng.Intn(len(colorChars) + 1)
+			randomIndices := make([]int, randomCount.Int64())
+			for j := 0; j < int(randomCount.Int64()); j++ {
+				x, _ := crand.Int(crand.Reader, big.NewInt(int64(len(colorChars))))
+				randomIndices[j] = int(x.Int64())
 			}
-			for j := 0; j < randomCount; j++ {
+			for j := 0; j < int(randomCount.Int64()); j++ {
 				colorChars = []rune(InsertCharAtIndex(string(colorChars), randomChars[j], randomIndices[j]))
 			}
 			randomCases[i] = string(colorChars)
 		case Substitution:
 			colorChars := []rune(colorStr)
-			changedIndices := make([]int, randomCount)
-			for j := 0; j < randomCount; j++ {
-				changedIndices[j] = rng.Intn(lenColor)
+			changedIndices := make([]int, randomCount.Int64())
+			for j := 0; j < int(randomCount.Int64()); j++ {
+				randColorIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(lenColor)))
+				changedIndices[j] = int(randColorIdx.Int64())
 			}
-			for j := 0; j < randomCount; j++ {
+			for j := 0; j < int(randomCount.Int64()); j++ {
 				originalChar := colorChars[changedIndices[j]]
 				var newChar rune
 				for {
-					newChar = rune(alphabet[rng.Intn(len(alphabet))])
+					randCharIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(len(alphabet))))
+					newChar = rune(alphabet[randCharIdx.Int64()])
 					if newChar != originalChar {
 						break
 					}
@@ -86,7 +92,7 @@ func GenerateChallenge(nuid NUID, nRandom int, mandatoryCases []string) Challeng
 	}
 
 	allCases := append(mandatoryCases, randomCases...)
-	rand.Shuffle(len(allCases), func(i, j int) {
+	mrand.Shuffle(len(allCases), func(i, j int) {
 		allCases[i], allCases[j] = allCases[j], allCases[i]
 	})
 
@@ -162,10 +168,4 @@ func nEditsAway(str1, str2 string, n int) bool {
 	}
 
 	return editCount <= n
-}
-
-func hashCode(s string) uint32 {
-	h := fnv.New32a()
-	h.Write([]byte(s))
-	return h.Sum32()
 }
