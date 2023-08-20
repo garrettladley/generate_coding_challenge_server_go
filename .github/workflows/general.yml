@@ -25,7 +25,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
       - name: Enforce linting
-        run: go vet ./...
+        run: |
+          lint_output=$(go vet ./...)
+          if [[ -n "$lint_output" ]]; then
+            echo "$lint_output"
+            echo "::error::Linting issues found"
+            exit 1
+          fi
 
   test:
     name: Test
