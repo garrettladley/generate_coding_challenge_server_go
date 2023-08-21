@@ -13,7 +13,7 @@ on:
       - "**/go.sum"
 
 jobs:
-  tests:
+  securit_audit:
     runs-on: ubuntu-latest
     env:
       GO111MODULE: on
