@@ -29,7 +29,7 @@ func (a *ApplicantHandler) Register(c *fiber.Ctx) error {
 
 	nuid, err := domain.ParseNUID(registerRequestBody.RawNUID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid nuid %s", registerRequestBody.RawNUID))
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid NUID %s", registerRequestBody.RawNUID))
 	}
 
 	applicantName, err := domain.ParseApplicantName(registerRequestBody.RawApplicantName)
@@ -37,7 +37,7 @@ func (a *ApplicantHandler) Register(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid applicant name %s", registerRequestBody.RawApplicantName))
 	}
 
-	result, err := (*storage.ApplicantStorage)(a).RegisterApplicant(domain.Applicant{
+	result, err := (*storage.ApplicantStorage)(a).Register(domain.Applicant{
 		NUID: *nuid,
 		Name: *applicantName,
 	})
@@ -58,7 +58,7 @@ func (a *ApplicantHandler) ForgotToken(c *fiber.Ctx) error {
 
 	nuid, err := domain.ParseNUID(rawNUID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid nuid %s", rawNUID))
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid NUID %s", rawNUID))
 	}
 
 	result, err := (*storage.ApplicantStorage)(a).ForgotToken(*nuid)
@@ -68,7 +68,7 @@ func (a *ApplicantHandler) ForgotToken(c *fiber.Ctx) error {
 	}
 
 	if result.HttpStatus == 404 {
-		return c.Status(result.HttpStatus).JSON("Record associated with given NUID not found!")
+		return c.Status(result.HttpStatus).SendString(result.Message)
 	}
 
 	return c.JSON(result)
@@ -89,7 +89,7 @@ func (a *ApplicantHandler) Challenge(c *fiber.Ctx) error {
 	}
 
 	if result.HttpStatus == 404 {
-		return c.Status(result.HttpStatus).JSON("Record associated with given token not found!")
+		return c.Status(result.HttpStatus).SendString(result.Message)
 	}
 
 	return c.JSON(result)
@@ -106,6 +106,7 @@ func (a *ApplicantHandler) Submit(c *fiber.Ctx) error {
 	rawToken := c.Params("token")
 
 	token, err := uuid.Parse(rawToken)
+
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid token %s", rawToken))
 	}
@@ -123,7 +124,7 @@ func (a *ApplicantHandler) Submit(c *fiber.Ctx) error {
 	}
 
 	if result.HttpStatus == 404 {
-		return c.Status(result.HttpStatus).JSON("Record associated with given token not found!")
+		return c.Status(result.HttpStatus).SendString(result.Message)
 	}
 
 	if result.Correct {

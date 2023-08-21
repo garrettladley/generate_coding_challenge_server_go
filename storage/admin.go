@@ -32,12 +32,12 @@ type ApplicantFound struct {
 	TimeToCompletion time.Duration
 }
 
-type GetApplicantResult struct {
+type ApplicantResult struct {
 	Message          string               `json:"message,omitempty"`
 	NUID             domain.NUID          `json:"nuid,omitempty"`
 	Name             domain.ApplicantName `json:"name,omitempty"`
 	Correct          *bool                `json:"correct,omitempty"`
-	TimeToCompletion TimeToCompletion     `json:"time_to_completion,omitempty"`
+	TimeToCompletion *TimeToCompletion    `json:"time_to_completion,omitempty"`
 	HttpStatus       int                  `json:"-"`
 }
 
@@ -46,14 +46,14 @@ type TimeToCompletion struct {
 	Nanos   int `json:"nanos"`
 }
 
-func convert(t time.Duration) TimeToCompletion {
-	return TimeToCompletion{
+func convert(t time.Duration) *TimeToCompletion {
+	return &TimeToCompletion{
 		Seconds: int(t.Seconds()),
 		Nanos:   int(t.Nanoseconds()),
 	}
 }
 
-func (s *AdminStorage) Applicant(nuid domain.NUID) (GetApplicantResult, error) {
+func (s *AdminStorage) Applicant(nuid domain.NUID) (ApplicantResult, error) {
 	var applicant GetApplicantDB
 	err := s.Conn.Get(&applicant, `
 	SELECT a.nuid, a.applicant_name, s.correct, s.submission_time, a.registration_time
@@ -67,21 +67,21 @@ func (s *AdminStorage) Applicant(nuid domain.NUID) (GetApplicantResult, error) {
 `, nuid)
 
 	if !applicant.NUID.Valid && !applicant.ApplicantName.Valid && !applicant.Correct.Valid && !applicant.SubmissionTime.Valid && !applicant.RegistrationTime.Valid && err != nil {
-		return GetApplicantResult{Message: fmt.Sprintf("Applicant with NUID %s not found!", nuid), HttpStatus: 404}, nil
+		return ApplicantResult{Message: fmt.Sprintf("Applicant with NUID %s not found!", nuid), HttpStatus: 404}, nil
 	} else if err != nil {
-		return GetApplicantResult{}, err
+		return ApplicantResult{}, err
 	}
 
 	if !applicant.Correct.Valid && !applicant.SubmissionTime.Valid {
-		return GetApplicantResult{Message: fmt.Sprintf("Applicant with NUID %s has not submitted yet!", nuid)}, nil
+		return ApplicantResult{Message: fmt.Sprintf("Applicant with NUID %s has not submitted yet!", nuid)}, nil
 	}
 
 	applicantFound, err := processGetApplicantDB(applicant)
 	if err != nil {
-		return GetApplicantResult{}, fmt.Errorf("invalid database state!. Error: %v", err)
+		return ApplicantResult{}, fmt.Errorf("invalid database state!. Error: %v", err)
 	}
 
-	return GetApplicantResult{
+	return ApplicantResult{
 		NUID:             applicantFound.NUID,
 		Name:             applicantFound.ApplicantName,
 		Correct:          &applicantFound.Correct,

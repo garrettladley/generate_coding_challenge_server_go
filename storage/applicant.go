@@ -21,14 +21,14 @@ func NewApplicantStorage(conn *sqlx.DB) *ApplicantStorage {
 	return &ApplicantStorage{Conn: conn}
 }
 
-type RegisterApplicantResponse struct {
+type RegisterResult struct {
 	Token      *uuid.UUID `json:"token,omitempty"`
 	Challenge  []string   `json:"challenge,omitempty"`
 	Message    string     `json:"message,omitempty"`
 	HttpStatus int        `json:"-"`
 }
 
-func (s *ApplicantStorage) RegisterApplicant(applicant domain.Applicant) (RegisterApplicantResponse, error) {
+func (s *ApplicantStorage) Register(applicant domain.Applicant) (RegisterResult, error) {
 	registrationTime := time.Now()
 	token := uuid.New()
 	red, _ := domain.Red.String()
@@ -45,15 +45,16 @@ func (s *ApplicantStorage) RegisterApplicant(applicant domain.Applicant) (Regist
 	if err != nil {
 		pgErr, isPGError := err.(*pq.Error)
 		if isPGError && pgErr.Code == "23505" {
-			return RegisterApplicantResponse{Message: fmt.Sprintf("NUID %s has already registered! Use the forgot_token endpoint to retrieve your token.", applicant.NUID), HttpStatus: 409}, nil
+			return RegisterResult{Message: fmt.Sprintf("NUID %s has already registered! Use the forgot_token endpoint to retrieve your token.", applicant.NUID), HttpStatus: 409}, nil
 		}
-		return RegisterApplicantResponse{}, err
+		return RegisterResult{}, err
 	}
 
-	return RegisterApplicantResponse{Token: &token, Challenge: challenge.Challenge}, nil
+	return RegisterResult{Token: &token, Challenge: challenge.Challenge}, nil
 }
 
-type ForgotTokenResponse struct {
+type ForgotTokenResult struct {
+	Message    string    `json:"message,omitempty"`
 	Token      uuid.UUID `json:"token"`
 	HttpStatus int       `json:"-"`
 }
@@ -62,26 +63,27 @@ type ForgotTokenDB struct {
 	Token sql.NullString `db:"token"`
 }
 
-func (s *ApplicantStorage) ForgotToken(nuid domain.NUID) (ForgotTokenResponse, error) {
+func (s *ApplicantStorage) ForgotToken(nuid domain.NUID) (ForgotTokenResult, error) {
 	var dbResult ForgotTokenDB
 	err := s.Conn.Get(&dbResult, "SELECT token FROM applicants WHERE nuid=$1;", nuid)
 
 	if !dbResult.Token.Valid {
-		return ForgotTokenResponse{HttpStatus: 404}, nil
+		return ForgotTokenResult{Message: fmt.Sprintf("Applicant with NUID %s not found!", nuid), HttpStatus: 404}, nil
 	} else if err != nil {
-		return ForgotTokenResponse{}, err
+		return ForgotTokenResult{}, err
 	}
 
 	token, err := uuid.Parse(dbResult.Token.String)
 
 	if err != nil {
-		return ForgotTokenResponse{}, err
+		return ForgotTokenResult{}, err
 	}
 
-	return ForgotTokenResponse{Token: token}, nil
+	return ForgotTokenResult{Token: token}, nil
 }
 
-type ChallengeResponse struct {
+type ChallengeResult struct {
+	Message    string   `json:"message,omitempty"`
 	Challenge  []string `json:"challenge"`
 	HttpStatus int      `json:"-"`
 }
@@ -128,22 +130,23 @@ func (a *StringArray) Scan(src interface{}) error {
 	return nil
 }
 
-func (s *ApplicantStorage) Challenge(token uuid.UUID) (ChallengeResponse, error) {
+func (s *ApplicantStorage) Challenge(token uuid.UUID) (ChallengeResult, error) {
 	var dbResult ChallengeDB
 	err := s.Conn.Get(&dbResult, "SELECT challenge FROM applicants WHERE token=$1;", token)
 
 	if len(dbResult.Challenge) == 0 && err != nil {
-		return ChallengeResponse{HttpStatus: 404}, nil
+		return ChallengeResult{Message: fmt.Sprintf("Record associated with token %s not found!", token), HttpStatus: 404}, nil
 	} else if err != nil {
-		return ChallengeResponse{}, err
+		return ChallengeResult{}, err
 	}
 
-	return ChallengeResponse{Challenge: dbResult.Challenge}, nil
+	return ChallengeResult{Challenge: dbResult.Challenge}, nil
 }
 
 type SubmitResult struct {
-	Correct    bool
-	HttpStatus int
+	Message    string `json:"message,omitempty"`
+	Correct    bool   `json:"correct,omitempty"`
+	HttpStatus int    `json:"-"`
 }
 type SubmitDB struct {
 	NUID     sql.NullString `db:"nuid"`
@@ -163,7 +166,7 @@ func (s *ApplicantStorage) Submit(token uuid.UUID, givenSolution []string) (Subm
 	}
 
 	if !dbResult.NUID.Valid && len(dbResult.Solution) == 0 {
-		return SubmitResult{HttpStatus: 404}, nil
+		return SubmitResult{Message: fmt.Sprintf("Record associated with token %s not found!", token), HttpStatus: 404}, nil
 	}
 
 	nuid, err := domain.ParseNUID(dbResult.NUID.String)

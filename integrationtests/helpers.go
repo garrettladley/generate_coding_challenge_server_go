@@ -140,11 +140,11 @@ func configureDatabase(config config.DatabaseSettings) (*sqlx.DB, error) {
 	return connectionWithDB, nil
 }
 
-func RegisterSampleApplicant(app TestApp) (*storage.RegisterApplicantResponse, error) {
+func RegisterSampleApplicant(app TestApp) (*storage.RegisterResult, error) {
 	return RegisterSampleApplicantWithNUID(app, "002172052")
 }
 
-func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*storage.RegisterApplicantResponse, error) {
+func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*storage.RegisterResult, error) {
 	data := map[string]string{
 		"name": "Garrett",
 		"nuid": nuid.String(),
@@ -166,7 +166,7 @@ func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*storage.Re
 	}
 
 	if resp.StatusCode != 200 {
-		return &storage.RegisterApplicantResponse{HttpStatus: resp.StatusCode}, nil
+		return &storage.RegisterResult{HttpStatus: resp.StatusCode}, nil
 	}
 
 	var responseBody map[string]interface{}
@@ -187,7 +187,7 @@ func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*storage.Re
 		return nil, err
 	}
 
-	return &storage.RegisterApplicantResponse{
+	return &storage.RegisterResult{
 		Challenge:  challengeStrings,
 		Token:      token,
 		HttpStatus: resp.StatusCode,
@@ -235,14 +235,28 @@ func GetChallengeFromResponse(resp *http.Response) ([]string, error) {
 	return GetChallengeFromBody(responseBody)
 }
 
-func SubmitSolution(registerResponse *storage.RegisterApplicantResponse, app TestApp, solution []string) (*http.Response, error) {
+func GetTokenFromResponse(resp *http.Response) (*uuid.UUID, error) {
+	var responseBody map[string]interface{}
+
+	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
+		return nil, err
+	}
+
+	return GetTokenFromBody(responseBody)
+}
+
+func SubmitSolution(app TestApp, registerResponse *storage.RegisterResult, solution []string) (*http.Response, error) {
+	return SubmitSolutionWithToken(app, *registerResponse.Token, solution)
+}
+
+func SubmitSolutionWithToken(app TestApp, token uuid.UUID, solution []string) (*http.Response, error) {
 	body, err := json.Marshal(solution)
 
 	if err != nil {
 		return nil, err
 	}
 
-	req := httptest.NewRequest("POST", fmt.Sprintf("%s/submit/%s", app.Address, registerResponse.Token), bytes.NewBuffer(body))
+	req := httptest.NewRequest("POST", fmt.Sprintf("%s/submit/%s", app.Address, token), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.App.Test(req)
@@ -252,4 +266,51 @@ func SubmitSolution(registerResponse *storage.RegisterApplicantResponse, app Tes
 	}
 
 	return resp, nil
+}
+
+func SubmitCorrectSolution(app TestApp) (*http.Response, error) {
+	nuid, err := domain.ParseNUID("002172052")
+
+	if err != nil {
+		return nil, err
+	}
+
+	return SubmitCorrectSolutionWithNUID(app, *nuid)
+}
+
+func SubmitCorrectSolutionWithNUID(app TestApp, nuid domain.NUID) (*http.Response, error) {
+	registerResp, err := RegisterSampleApplicantWithNUID(app, nuid)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to register applicant: %v", err)
+	}
+
+	if registerResp.HttpStatus != 200 {
+		return nil, fmt.Errorf("failed to register applicant: %v", err)
+	}
+
+	solution := []string{}
+
+	for _, challenge := range registerResp.Challenge {
+		result, err := domain.OneEditAway(challenge)
+		if err == nil {
+			result, err := result.String()
+			if err != nil {
+				return nil, err
+			}
+			solution = append(solution, result)
+		}
+	}
+
+	submitResp, err := SubmitSolution(app, registerResp, solution)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if submitResp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to submit solution: %v", err)
+	}
+
+	return submitResp, nil
 }

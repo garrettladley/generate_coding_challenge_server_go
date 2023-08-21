@@ -19,8 +19,9 @@ func (a *AdminHandler) Applicant(c *fiber.Ctx) error {
 	rawNUID := c.Params("nuid")
 
 	nuid, err := domain.ParseNUID(rawNUID)
+
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid nuid %s", rawNUID))
+		return c.Status(fiber.StatusBadRequest).SendString(fmt.Sprintf("invalid NUID %s", rawNUID))
 	}
 
 	result, err := (*storage.AdminStorage)(a).Applicant(*nuid)
@@ -30,7 +31,7 @@ func (a *AdminHandler) Applicant(c *fiber.Ctx) error {
 	}
 
 	if result.HttpStatus == 404 {
-		return c.Status(result.HttpStatus).JSON(result)
+		return c.Status(result.HttpStatus).SendString(result.Message)
 	}
 
 	return c.JSON(result)

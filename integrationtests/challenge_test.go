@@ -72,16 +72,6 @@ func TestChallenge_ReturnsA400ForInvalidToken(t *testing.T) {
 		t.Errorf("Failed to spawn app: %v", err)
 	}
 
-	registerResp, err := RegisterSampleApplicant(app)
-
-	if err != nil {
-		t.Errorf("Failed to register applicant: %v", err)
-	}
-
-	if registerResp.HttpStatus != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", registerResp.HttpStatus)
-	}
-
 	invalidToken := "foo"
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/challenge/%s", app.Address, invalidToken), nil)
@@ -120,7 +110,9 @@ func TestChallenge_ReturnsA404ForTokenThatDoesNotExistInDB(t *testing.T) {
 		t.Errorf("Failed to spawn app: %v", err)
 	}
 
-	req := httptest.NewRequest("GET", fmt.Sprintf("%s/challenge/%s", app.Address, uuid.New()), nil)
+	nonexistentToken := uuid.New().String()
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("%s/challenge/%s", app.Address, nonexistentToken), nil)
 
 	if err != nil {
 		t.Errorf("Failed to execute request: %v", err)
@@ -144,7 +136,7 @@ func TestChallenge_ReturnsA404ForTokenThatDoesNotExistInDB(t *testing.T) {
 
 	responseString := string(body)
 
-	if responseString != "\"Record associated with given token not found!\"" {
-		t.Errorf("Expected response body to be 'Record associated with given token not found!', but got: %v", responseString)
+	if responseString != fmt.Sprintf("Record associated with token %s not found!", nonexistentToken) {
+		t.Errorf("Expected response body to be 'Record associated with token %s not found!', but got: %s", nonexistentToken, responseString)
 	}
 }
