@@ -3,9 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
-	"strconv"
-
 	"path/filepath"
+	"strconv"
 
 	"github.com/spf13/viper"
 )
@@ -68,7 +67,6 @@ const (
 )
 
 func GetConfiguration() (Settings, error) {
-
 	basePath, err := os.Getwd()
 	if err != nil {
 		return Settings{}, fmt.Errorf("failed to determine the current directory: %w", err)
