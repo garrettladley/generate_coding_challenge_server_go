@@ -16,8 +16,8 @@ func NewApplicantHandler(storage *storage.ApplicantStorage) *ApplicantHandler {
 }
 
 type RegisterRequestBody struct {
-	RawNUID          string `json:"nuid"`
 	RawApplicantName string `json:"name"`
+	RawNUID          string `json:"nuid"`
 }
 
 func (a *ApplicantHandler) Register(c *fiber.Ctx) error {

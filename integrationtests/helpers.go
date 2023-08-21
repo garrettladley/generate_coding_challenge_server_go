@@ -1,8 +1,12 @@
 package integrationtests
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 
 	"github.com/garrettladley/generate_coding_challenge_server_go/config"
@@ -133,4 +137,28 @@ func configureDatabase(config config.DatabaseSettings) (*sqlx.DB, error) {
 	}
 
 	return connectionWithDB, nil
+}
+
+func RegisterSampleApplicant(app TestApp) (*http.Response, error) {
+	data := map[string]string{
+		"name": "Garrett",
+		"nuid": "002172052",
+	}
+
+	body, err := json.Marshal(data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req := httptest.NewRequest("POST", fmt.Sprintf("%s/register", app.Address), bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.App.Test(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }

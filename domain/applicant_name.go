@@ -28,6 +28,10 @@ func ParseApplicantName(str string) (*ApplicantName, error) {
 	return &applicantName, nil
 }
 
+func (name *ApplicantName) String() string {
+	return string(*name)
+}
+
 func containsRune(slice []rune, target rune) bool {
 	for _, item := range slice {
 		if item == target {

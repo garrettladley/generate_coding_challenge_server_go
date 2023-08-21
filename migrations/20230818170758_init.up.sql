@@ -1,6 +1,12 @@
+CREATE DOMAIN nuid_domain AS varchar(9)
+    CHECK (value ~ '^[0-9]{9}$');
+
+CREATE DOMAIN applicant_name_domain AS varchar(256)
+    CHECK (value !~ '[/()"<>\\{}]');
+
 CREATE TABLE IF NOT EXISTS applicants (
-    nuid varchar PRIMARY KEY,
-    applicant_name varchar NOT NULL,
+    nuid nuid_domain PRIMARY KEY,
+    applicant_name applicant_name_domain NOT NULL,
     registration_time timestamp with time zone NOT NULL,
     token uuid UNIQUE NOT NULL,
     challenge text[] NOT NULL,
@@ -9,7 +15,7 @@ CREATE TABLE IF NOT EXISTS applicants (
 
 CREATE TABLE IF NOT EXISTS submissions (
     submission_id serial PRIMARY KEY,
-    nuid varchar NOT NULL REFERENCES applicants (nuid),
+    nuid nuid_domain NOT NULL REFERENCES applicants (nuid),
     correct boolean NOT NULL,
     submission_time timestamp with time zone NOT NULL
 );
