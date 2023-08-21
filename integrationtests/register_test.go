@@ -29,6 +29,10 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 		t.Errorf("Failed to register applicant: %v", err)
 	}
 
+	if resp.HttpStatus != 200 {
+		t.Errorf("Expected status code to be 200, but got: %v", resp.HttpStatus)
+	}
+
 	numRandom := 100
 	numMandatory := 7
 
@@ -190,13 +194,17 @@ func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
 		t.Errorf("Failed to parse NUID: %v", err)
 	}
 
-	_, err = RegisterSampleApplicantWithNUID(app, *nuid)
+	resp, err := RegisterSampleApplicantWithNUID(app, *nuid)
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
 	}
 
-	resp, err := RegisterSampleApplicantWithNUID(app, *nuid)
+	if resp.HttpStatus != 200 {
+		t.Errorf("Expected status code to be 200, but got: %v", resp.HttpStatus)
+	}
+
+	resp, err = RegisterSampleApplicantWithNUID(app, *nuid)
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)

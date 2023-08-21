@@ -21,6 +21,10 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithCorrectSolution(t *testi
 		t.Errorf("Failed to register applicant: %v", err)
 	}
 
+	if registerResp.HttpStatus != 200 {
+		t.Errorf("Expected status code to be 200, but got: %v", registerResp.HttpStatus)
+	}
+
 	solution := []string{}
 
 	for _, challenge := range registerResp.Challenge {
@@ -67,6 +71,10 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithIncorrectSolution(t *tes
 	}
 
 	registerResp, err := RegisterSampleApplicant(app)
+
+	if registerResp.HttpStatus != 200 {
+		t.Errorf("Expected status code to be 200, but got: %v", registerResp.HttpStatus)
+	}
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
