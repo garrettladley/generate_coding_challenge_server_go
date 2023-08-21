@@ -30,7 +30,7 @@ func TestGenerateChallenge(t *testing.T) {
 	}
 
 	for _, soln := range challenge.Solution {
-		result, err := oneEditAway(soln)
+		result, err := OneEditAway(soln)
 		resultStr, _ := result.String()
 		if resultStr == "" || err != nil {
 			t.Errorf("Expected valid answer, but got %v %v", resultStr, err)
@@ -40,19 +40,19 @@ func TestGenerateChallenge(t *testing.T) {
 
 func TestOneEditAwayExample(t *testing.T) {
 
-	if result, err := oneEditAway("red"); result != Red || err != nil {
+	if result, err := OneEditAway("red"); result != Red || err != nil {
 		t.Errorf("Expected Color red, but got %v %v", result, err)
 	}
-	if result, err := oneEditAway("lue"); result != Blue || err != nil {
+	if result, err := OneEditAway("lue"); result != Blue || err != nil {
 		t.Errorf("Expected Color blue, but got %v %v", result, err)
 	}
-	if result, err := oneEditAway("ooran"); err == nil {
+	if result, err := OneEditAway("ooran"); err == nil {
 		t.Errorf("Expected nil, but got %v %v", result, err)
 	}
-	if result, err := oneEditAway("abc"); err == nil {
+	if result, err := OneEditAway("abc"); err == nil {
 		t.Errorf("Expected nil, but got %v %v", result, err)
 	}
-	if result, err := oneEditAway("greene"); result != Green || err != nil {
+	if result, err := OneEditAway("greene"); result != Green || err != nil {
 		t.Errorf("Expected Color Green, but got %v %v", result, err)
 	}
 }

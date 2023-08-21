@@ -40,7 +40,7 @@ func GenerateChallenge(nRandom int, mandatoryCases []string) Challenge {
 
 	var answers []string
 	for _, caseColor := range allCases {
-		answer, err := oneEditAway(caseColor)
+		answer, err := OneEditAway(caseColor)
 		if err != nil {
 			continue
 		}
@@ -123,7 +123,7 @@ func GenerateRandomInt(max int64) int64 {
 	return randInt.Int64()
 }
 
-func oneEditAway(str string) (Color, error) {
+func OneEditAway(str string) (Color, error) {
 	result, err := oneEditAwayOnlyOneAnswer(str, Colors(), func(c Color) string {
 		s, _ := c.String()
 		return s

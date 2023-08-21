@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
-	"github.com/google/uuid"
 )
 
 type RegisterDB struct {
@@ -30,34 +29,11 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 		t.Errorf("Failed to register applicant: %v", err)
 	}
 
-	var responseBody map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
-
-	token, tokenExists := responseBody["token"]
-
-	if !tokenExists {
-		t.Error("Response does not contain 'token' property")
-	}
-
-	_, err = uuid.Parse(token.(string))
-
-	if err != nil {
-		t.Errorf("Expected token to be a valid UUID, but got: %v", token)
-	}
-
-	challenge, challengeExists := responseBody["challenge"].([]interface{})
-
-	if !challengeExists {
-		t.Error("Response does not contain 'challenge' property")
-	}
-
 	numRandom := 100
 	numMandatory := 7
 
-	if len(challenge) != numRandom+numMandatory {
-		t.Errorf("Expected 'challenge' length to be %v, but got: %v", numRandom+numMandatory, len(challenge))
+	if len(resp.Challenge) != numRandom+numMandatory {
+		t.Errorf("Expected 'challenge' length to be %v, but got: %v", numRandom+numMandatory, len(resp.Challenge))
 	}
 
 	var dbResult RegisterDB
@@ -214,24 +190,20 @@ func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
 		t.Errorf("Failed to parse NUID: %v", err)
 	}
 
+	_, err = RegisterSampleApplicantWithNUID(app, *nuid)
+
+	if err != nil {
+		t.Errorf("Failed to register applicant: %v", err)
+	}
+
 	resp, err := RegisterSampleApplicantWithNUID(app, *nuid)
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
 	}
 
-	if resp.StatusCode != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", resp.StatusCode)
-	}
-
-	resp, err = RegisterSampleApplicantWithNUID(app, *nuid)
-
-	if err != nil {
-		t.Errorf("Failed to register applicant: %v", err)
-	}
-
-	if resp.StatusCode != 409 {
-		t.Errorf("Expected status code to be 409, but got: %v", resp.StatusCode)
+	if resp.HttpStatus != 409 {
+		t.Errorf("Expected status code to be 409, but got: %v", resp.HttpStatus)
 	}
 
 	var count int

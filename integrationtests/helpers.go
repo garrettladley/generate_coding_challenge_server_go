@@ -18,6 +18,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -139,11 +140,11 @@ func configureDatabase(config config.DatabaseSettings) (*sqlx.DB, error) {
 	return connectionWithDB, nil
 }
 
-func RegisterSampleApplicant(app TestApp) (*http.Response, error) {
+func RegisterSampleApplicant(app TestApp) (*storage.RegisterApplicantResponse, error) {
 	return RegisterSampleApplicantWithNUID(app, "002172052")
 }
 
-func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*http.Response, error) {
+func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*storage.RegisterApplicantResponse, error) {
 	data := map[string]string{
 		"name": "Garrett",
 		"nuid": nuid.String(),
@@ -156,6 +157,61 @@ func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*http.Respo
 	}
 
 	req := httptest.NewRequest("POST", fmt.Sprintf("%s/register", app.Address), bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.App.Test(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return &storage.RegisterApplicantResponse{HttpStatus: resp.StatusCode}, nil
+	}
+
+	var responseBody map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
+		return nil, err
+	}
+
+	challenge, challengeExists := responseBody["challenge"].([]interface{})
+
+	if !challengeExists {
+		return nil, fmt.Errorf("response does not contain 'challenge' property")
+	}
+
+	challengeStrings := make([]string, len(challenge))
+
+	for i, v := range challenge {
+		challengeStrings[i] = v.(string)
+	}
+
+	token, tokenExists := responseBody["token"]
+
+	if !tokenExists {
+		return nil, fmt.Errorf("response does not contain 'token' property")
+	}
+
+	parsedToken, err := uuid.Parse(token.(string))
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &storage.RegisterApplicantResponse{
+		Challenge:  challengeStrings,
+		Token:      &parsedToken,
+		HttpStatus: resp.StatusCode,
+	}, nil
+}
+func SubmitSolution(registerResponse *storage.RegisterApplicantResponse, app TestApp, solution []string) (*http.Response, error) {
+	body, err := json.Marshal(solution)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req := httptest.NewRequest("POST", fmt.Sprintf("%s/submit/%s", app.Address, registerResponse.Token), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.App.Test(req)
