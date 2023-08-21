@@ -9,11 +9,15 @@ import (
 	"testing"
 
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
+	"github.com/garrettladley/generate_coding_challenge_server_go/storage"
+	"github.com/google/uuid"
 )
 
 type RegisterDB struct {
-	ApplicantName sql.NullString `db:"applicant_name"`
-	Nuid          sql.NullString `db:"nuid"`
+	ApplicantName sql.NullString      `db:"applicant_name"`
+	NUID          sql.NullString      `db:"nuid"`
+	Token         sql.NullString      `db:"token"`
+	Challenge     storage.StringArray `db:"challenge"`
 }
 
 func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
@@ -42,14 +46,14 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 
 	var dbResult RegisterDB
 
-	err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid FROM applicants;")
+	err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid, token, challenge FROM applicants;")
 
 	if err != nil {
 		t.Errorf("Failed to query database: %v", err)
 	}
 
-	if !dbResult.ApplicantName.Valid && !dbResult.Nuid.Valid {
-		t.Error("Expected database to contain applicant name and nuid")
+	if !dbResult.ApplicantName.Valid && !dbResult.NUID.Valid && !dbResult.Token.Valid && len(dbResult.Challenge) == 0 {
+		t.Error("Expected database to contain applicant name, nuid, token, and challenge, but it did not")
 	}
 
 	name, err := domain.ParseApplicantName(dbResult.ApplicantName.String)
@@ -58,10 +62,16 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 		t.Errorf("Failed to parse applicant name due to invalid database state: %v", err)
 	}
 
-	nuid, err := domain.ParseNUID(dbResult.Nuid.String)
+	nuid, err := domain.ParseNUID(dbResult.NUID.String)
 
 	if err != nil {
 		t.Errorf("Failed to parse NUID due to invalid database state: %v", err)
+	}
+
+	token, err := uuid.Parse(dbResult.Token.String)
+
+	if err != nil {
+		t.Errorf("Failed to parse token due to invalid database state: %v", err)
 	}
 
 	if name.String() != "Garrett" {
@@ -70,6 +80,26 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 
 	if nuid.String() != "002172052" {
 		t.Errorf("Expected NUID to be '002172052', but got: %v", nuid)
+	}
+
+	if token != *resp.Token {
+		t.Errorf("Expected token to be '%v', but got: %v", resp.Token, token)
+	}
+
+	if len(dbResult.Challenge) != numRandom+numMandatory {
+		t.Errorf("Expected 'challenge' length to be %v, but got: %v", numRandom+numMandatory, len(dbResult.Challenge))
+	}
+
+	equal := true
+	for i := range dbResult.Challenge {
+		if dbResult.Challenge[i] != resp.Challenge[i] {
+			equal = false
+			break
+		}
+	}
+
+	if !equal {
+		t.Errorf("Expected challenge to be '%v', but got: %v", resp.Challenge, dbResult.Challenge)
 	}
 }
 
@@ -117,10 +147,10 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesAreMissing(t *testing.T) {
 		err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid FROM applicants;")
 
 		if err != nil {
-			if dbResult.ApplicantName.Valid && dbResult.Nuid.Valid && err != sql.ErrNoRows {
+			if dbResult.ApplicantName.Valid && dbResult.NUID.Valid && err != sql.ErrNoRows {
 				t.Errorf("Expected database to be empty, but got: %v", err)
 			}
-		} else if dbResult.ApplicantName.Valid || dbResult.Nuid.Valid {
+		} else if dbResult.ApplicantName.Valid || dbResult.NUID.Valid {
 			t.Errorf("Expected database to be empty, but got: %v", err)
 		}
 	}
@@ -172,10 +202,10 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesArePresentButInvalid(t *te
 		err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid FROM applicants;")
 
 		if err != nil {
-			if dbResult.ApplicantName.Valid && dbResult.Nuid.Valid && err != sql.ErrNoRows {
+			if dbResult.ApplicantName.Valid && dbResult.NUID.Valid && err != sql.ErrNoRows {
 				t.Errorf("Expected database to be empty, but got: %v", err)
 			}
-		} else if dbResult.ApplicantName.Valid || dbResult.Nuid.Valid {
+		} else if dbResult.ApplicantName.Valid || dbResult.NUID.Valid {
 			t.Errorf("Expected database to be empty, but got: %v", err)
 		}
 	}

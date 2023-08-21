@@ -131,12 +131,11 @@ func (a *StringArray) Scan(src interface{}) error {
 func (s *ApplicantStorage) Challenge(token uuid.UUID) (ChallengeResponse, error) {
 	var dbResult ChallengeDB
 	err := s.Conn.Get(&dbResult, "SELECT challenge FROM applicants WHERE token=$1;", token)
-	if err != nil {
-		return ChallengeResponse{}, err
-	}
 
-	if len(dbResult.Challenge) == 0 {
+	if len(dbResult.Challenge) == 0 && err != nil {
 		return ChallengeResponse{HttpStatus: 404}, nil
+	} else if err != nil {
+		return ChallengeResponse{}, err
 	}
 
 	return ChallengeResponse{Challenge: dbResult.Challenge}, nil

@@ -170,10 +170,31 @@ func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*storage.Re
 	}
 
 	var responseBody map[string]interface{}
+
 	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
 		return nil, err
 	}
 
+	challengeStrings, err := GetChallengeFromBody(responseBody)
+
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := GetTokenFromBody(responseBody)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &storage.RegisterApplicantResponse{
+		Challenge:  challengeStrings,
+		Token:      token,
+		HttpStatus: resp.StatusCode,
+	}, nil
+}
+
+func GetChallengeFromBody(responseBody map[string]interface{}) ([]string, error) {
 	challenge, challengeExists := responseBody["challenge"].([]interface{})
 
 	if !challengeExists {
@@ -186,6 +207,10 @@ func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*storage.Re
 		challengeStrings[i] = v.(string)
 	}
 
+	return challengeStrings, nil
+}
+
+func GetTokenFromBody(responseBody map[string]interface{}) (*uuid.UUID, error) {
 	token, tokenExists := responseBody["token"]
 
 	if !tokenExists {
@@ -198,12 +223,18 @@ func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*storage.Re
 		return nil, err
 	}
 
-	return &storage.RegisterApplicantResponse{
-		Challenge:  challengeStrings,
-		Token:      &parsedToken,
-		HttpStatus: resp.StatusCode,
-	}, nil
+	return &parsedToken, nil
 }
+
+func GetChallengeFromResponse(resp *http.Response) ([]string, error) {
+	var responseBody map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
+		return nil, err
+	}
+
+	return GetChallengeFromBody(responseBody)
+}
+
 func SubmitSolution(registerResponse *storage.RegisterApplicantResponse, app TestApp, solution []string) (*http.Response, error) {
 	body, err := json.Marshal(solution)
 
