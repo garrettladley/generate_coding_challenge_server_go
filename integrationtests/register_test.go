@@ -131,6 +131,18 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesAreMissing(t *testing.T) {
 		if resp.StatusCode != 400 {
 			t.Errorf("Expected status code to be 400, but got: %v", resp.StatusCode)
 		}
+
+		var dbResult RegisterDB
+
+		err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid FROM applicants;")
+
+		if err != nil {
+			if dbResult.ApplicantName.Valid && dbResult.Nuid.Valid && err != sql.ErrNoRows {
+				t.Errorf("Expected database to be empty, but got: %v", err)
+			}
+		} else if dbResult.ApplicantName.Valid || dbResult.Nuid.Valid {
+			t.Errorf("Expected database to be empty, but got: %v", err)
+		}
 	}
 }
 
@@ -174,6 +186,18 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesArePresentButInvalid(t *te
 		if resp.StatusCode != 400 {
 			t.Errorf("Expected status code to be 400, but got: %v", resp.StatusCode)
 		}
+
+		var dbResult RegisterDB
+
+		err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid FROM applicants;")
+
+		if err != nil {
+			if dbResult.ApplicantName.Valid && dbResult.Nuid.Valid && err != sql.ErrNoRows {
+				t.Errorf("Expected database to be empty, but got: %v", err)
+			}
+		} else if dbResult.ApplicantName.Valid || dbResult.Nuid.Valid {
+			t.Errorf("Expected database to be empty, but got: %v", err)
+		}
 	}
 }
 
@@ -184,7 +208,13 @@ func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
 		t.Errorf("Failed to spawn app: %v", err)
 	}
 
-	resp, err := RegisterSampleApplicant(app)
+	nuid, err := domain.ParseNUID("002172052")
+
+	if err != nil {
+		t.Errorf("Failed to parse NUID: %v", err)
+	}
+
+	resp, err := RegisterSampleApplicantWithNUID(app, *nuid)
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
@@ -194,7 +224,7 @@ func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
 		t.Errorf("Expected status code to be 200, but got: %v", resp.StatusCode)
 	}
 
-	resp, err = RegisterSampleApplicant(app)
+	resp, err = RegisterSampleApplicantWithNUID(app, *nuid)
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
@@ -202,5 +232,17 @@ func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
 
 	if resp.StatusCode != 409 {
 		t.Errorf("Expected status code to be 409, but got: %v", resp.StatusCode)
+	}
+
+	var count int
+
+	err = app.Conn.Get(&count, "SELECT COUNT(*) FROM applicants WHERE nuid = $1;", nuid.String())
+
+	if err != nil {
+		t.Errorf("Failed to query database: %v", err)
+	}
+
+	if count != 1 {
+		t.Errorf("Expected database to contain 1 applicant, but got: %v", count)
 	}
 }

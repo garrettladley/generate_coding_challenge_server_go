@@ -140,9 +140,13 @@ func configureDatabase(config config.DatabaseSettings) (*sqlx.DB, error) {
 }
 
 func RegisterSampleApplicant(app TestApp) (*http.Response, error) {
+	return RegisterSampleApplicantWithNUID(app, "002172052")
+}
+
+func RegisterSampleApplicantWithNUID(app TestApp, nuid domain.NUID) (*http.Response, error) {
 	data := map[string]string{
 		"name": "Garrett",
-		"nuid": "002172052",
+		"nuid": nuid.String(),
 	}
 
 	body, err := json.Marshal(data)
