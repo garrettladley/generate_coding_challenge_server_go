@@ -1,14 +1,16 @@
 name: Security Audit
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   schedule:
     - cron: "0 0 * * *"
+  push:
+    paths:
+      - "**/go.mod"
+      - "**/go.sum"
+  pull_request:
+    paths:
+      - "**/go.mod"
+      - "**/go.sum"
 
 jobs:
   tests:
