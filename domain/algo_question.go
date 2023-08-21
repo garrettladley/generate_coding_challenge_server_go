@@ -61,17 +61,17 @@ func generateRandomCases(nRandom int) []string {
 	alphabet := "abcdefghijklmnopqrstuvwxyz"
 
 	for i := 0; i < nRandom; i++ {
-		randColorIdx := generateRandomInt(int64(len(colors)))
+		randColorIdx := GenerateRandomInt(int64(len(colors)))
 		color := colors[randColorIdx]
 		colorStr, _ := color.String()
 		lenColor := len(colorStr)
-		randomCount := generateRandomInt(int64(lenColor + 1))
+		randomCount := GenerateRandomInt(int64(lenColor + 1))
 		if randomCount == 0 {
 			randomCases[i] = colorStr
 			continue
 		}
 
-		randEditTypeIdx := generateRandomInt(int64(len(editTypes)))
+		randEditTypeIdx := GenerateRandomInt(int64(len(editTypes)))
 		editType := editTypes[randEditTypeIdx]
 
 		switch editType {
@@ -81,12 +81,12 @@ func generateRandomCases(nRandom int) []string {
 			colorChars := []rune(colorStr)
 			randomChars := make([]rune, randomCount)
 			for j := int64(0); j < randomCount; j++ {
-				randomCharIdx := generateRandomInt(int64(len(alphabet)))
+				randomCharIdx := GenerateRandomInt(int64(len(alphabet)))
 				randomChars[j] = rune(alphabet[randomCharIdx])
 			}
 			randomIndices := make([]int, randomCount)
 			for j := int64(0); j < randomCount; j++ {
-				randomIndices[j] = int(generateRandomInt(int64(len(colorChars))))
+				randomIndices[j] = int(GenerateRandomInt(int64(len(colorChars))))
 			}
 			for j := int64(0); j < randomCount; j++ {
 				colorChars = []rune(InsertCharAtIndex(string(colorChars), randomChars[j], randomIndices[j]))
@@ -96,14 +96,14 @@ func generateRandomCases(nRandom int) []string {
 			colorChars := []rune(colorStr)
 			changedIndices := make([]int, randomCount)
 			for j := int64(0); j < randomCount; j++ {
-				randColorIdx := generateRandomInt(int64(lenColor))
+				randColorIdx := GenerateRandomInt(int64(lenColor))
 				changedIndices[j] = int(randColorIdx)
 			}
 			for j := int64(0); j < randomCount; j++ {
 				originalChar := colorChars[changedIndices[j]]
 				var newChar rune
 				for {
-					randCharIdx := generateRandomInt(int64(len(alphabet)))
+					randCharIdx := GenerateRandomInt(int64(len(alphabet)))
 					newChar = rune(alphabet[randCharIdx])
 					if newChar != originalChar {
 						break
@@ -118,7 +118,7 @@ func generateRandomCases(nRandom int) []string {
 	return randomCases
 }
 
-func generateRandomInt(max int64) int64 {
+func GenerateRandomInt(max int64) int64 {
 	randInt, _ := crand.Int(crand.Reader, big.NewInt(max))
 	return randInt.Int64()
 }

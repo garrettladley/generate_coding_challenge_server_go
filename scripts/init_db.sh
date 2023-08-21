@@ -10,7 +10,7 @@ fi
 if ! [ -x "$(command -v migrate)" ]; then
   echo >&2 "Error: sqlx CLI is not installed."
   echo >&2 "Use:"
-  echo >&2 "    go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest"
+  echo >&2 "    go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest"
   echo >&2 "to install it."
   exit 1
 fi

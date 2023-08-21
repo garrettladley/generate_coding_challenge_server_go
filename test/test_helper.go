@@ -2,11 +2,11 @@ package test
 
 import (
 	"fmt"
-	"math/rand"
 	"net"
 	"os"
 
 	"github.com/garrettladley/generate_coding_challenge_server_go/config"
+	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
 	"github.com/garrettladley/generate_coding_challenge_server_go/handlers"
 	"github.com/garrettladley/generate_coding_challenge_server_go/server"
 	"github.com/garrettladley/generate_coding_challenge_server_go/storage"
@@ -75,7 +75,7 @@ func generateRandomDBName() string {
 	length := 36
 	result := make([]byte, length)
 	for i := 0; i < length; i++ {
-		result[i] = letterBytes[rand.Intn(len(letterBytes))]
+		result[i] = letterBytes[domain.GenerateRandomInt(int64(len(letterBytes)))]
 	}
 
 	return string(result)
