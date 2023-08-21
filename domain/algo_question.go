@@ -36,51 +36,50 @@ func GenerateChallenge(nRandom int, mandatoryCases []string) Challenge {
 	alphabet := "abcdefghijklmnopqrstuvwxyz"
 
 	for i := 0; i < nRandom; i++ {
-		randColorIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(len(colors))))
-		color := colors[randColorIdx.Int64()]
+		randColorIdx := GenerateRandomInt(int64(len(colors)))
+		color := colors[randColorIdx]
 		colorStr, _ := color.String()
 		lenColor := len(colorStr)
-		randomCount, _ := crand.Int(crand.Reader, big.NewInt(int64(lenColor+1)))
-		if randomCount.Int64() == 0 {
+		randomCount := GenerateRandomInt(int64(lenColor + 1))
+		if randomCount == 0 {
 			randomCases[i] = colorStr
 			continue
 		}
 
-		randEditTypeIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(len(editTypes))))
-		editType := editTypes[randEditTypeIdx.Int64()]
+		randEditTypeIdx := GenerateRandomInt(int64(len(editTypes)))
+		editType := editTypes[randEditTypeIdx]
 
 		switch editType {
 		case Deletion:
-			randomCases[i] = colorStr[randomCount.Int64():]
+			randomCases[i] = colorStr[randomCount:]
 		case Insertion:
 			colorChars := []rune(colorStr)
-			randomChars := make([]rune, randomCount.Int64())
-			for j := 0; j < int(randomCount.Int64()); j++ {
-				randomCharIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(len(alphabet))))
-				randomChars[j] = rune(alphabet[randomCharIdx.Int64()])
+			randomChars := make([]rune, randomCount)
+			for j := int64(0); j < randomCount; j++ {
+				randomCharIdx := GenerateRandomInt(int64(len(alphabet)))
+				randomChars[j] = rune(alphabet[randomCharIdx])
 			}
-			randomIndices := make([]int, randomCount.Int64())
-			for j := 0; j < int(randomCount.Int64()); j++ {
-				x, _ := crand.Int(crand.Reader, big.NewInt(int64(len(colorChars))))
-				randomIndices[j] = int(x.Int64())
+			randomIndices := make([]int, randomCount)
+			for j := int64(0); j < randomCount; j++ {
+				randomIndices[j] = int(GenerateRandomInt(int64(len(colorChars))))
 			}
-			for j := 0; j < int(randomCount.Int64()); j++ {
+			for j := int64(0); j < randomCount; j++ {
 				colorChars = []rune(InsertCharAtIndex(string(colorChars), randomChars[j], randomIndices[j]))
 			}
 			randomCases[i] = string(colorChars)
 		case Substitution:
 			colorChars := []rune(colorStr)
-			changedIndices := make([]int, randomCount.Int64())
-			for j := 0; j < int(randomCount.Int64()); j++ {
-				randColorIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(lenColor)))
-				changedIndices[j] = int(randColorIdx.Int64())
+			changedIndices := make([]int, randomCount)
+			for j := int64(0); j < randomCount; j++ {
+				randColorIdx := GenerateRandomInt(int64(lenColor))
+				changedIndices[j] = int(randColorIdx)
 			}
-			for j := 0; j < int(randomCount.Int64()); j++ {
+			for j := int64(0); j < randomCount; j++ {
 				originalChar := colorChars[changedIndices[j]]
 				var newChar rune
 				for {
-					randCharIdx, _ := crand.Int(crand.Reader, big.NewInt(int64(len(alphabet))))
-					newChar = rune(alphabet[randCharIdx.Int64()])
+					randCharIdx := GenerateRandomInt(int64(len(alphabet)))
+					newChar = rune(alphabet[randCharIdx])
 					if newChar != originalChar {
 						break
 					}
@@ -110,6 +109,11 @@ func GenerateChallenge(nRandom int, mandatoryCases []string) Challenge {
 		Challenge: allCases,
 		Solution:  answers,
 	}
+}
+
+func GenerateRandomInt(max int64) int64 {
+	randInt, _ := crand.Int(crand.Reader, big.NewInt(max))
+	return randInt.Int64()
 }
 
 func oneEditAway(str string) (Color, error) {
