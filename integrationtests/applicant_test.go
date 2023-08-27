@@ -7,12 +7,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
 	"github.com/garrettladley/generate_coding_challenge_server_go/handlers"
-	"github.com/garrettladley/generate_coding_challenge_server_go/storage"
 )
 
 func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithCorrectSolution(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -31,19 +33,17 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithCorrectSolution(t *testi
 		t.Errorf("Failed to submit solution: %v", err)
 	}
 
+	assert.Equal(200, submitResp.StatusCode)
+
 	var submitResponseBody handlers.SubmitResponseBody
 
 	if err := json.NewDecoder(submitResp.Body).Decode(&submitResponseBody); err != nil {
 		t.Errorf("Failed to parse response body: %v", err)
 	}
 
-	if !submitResponseBody.Correct {
-		t.Errorf("Expected solution to be correct, but got: %v", submitResponseBody.Correct)
-	}
+	assert.True(submitResponseBody.Correct)
 
-	if submitResponseBody.Message != "Correct - nice work!" {
-		t.Errorf("Expected message to be 'Correct - nice work!', but got: %v", submitResponseBody.Message)
-	}
+	assert.Equal("Correct - nice work!", submitResponseBody.Message)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/applicant/%s", app.Address, nuid.String()), nil)
 
@@ -53,30 +53,23 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithCorrectSolution(t *testi
 		t.Errorf("Failed to make request: %v", err)
 	}
 
-	if resp.StatusCode != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", resp.StatusCode)
-	}
+	assert.Equal(200, resp.StatusCode)
 
-	var applicantResponseBody storage.ApplicantResult
+	var applicantResponseBody handlers.ApplicantResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&applicantResponseBody); err != nil {
 		t.Errorf("Failed to parse response body: %v", err)
 	}
 
-	if applicantResponseBody.NUID != *nuid {
-		t.Errorf("Expected NUID to be %s, but got: %s", nuid.String(), applicantResponseBody.NUID)
-	}
+	assert.Equal(*nuid, applicantResponseBody.NUID)
 
-	if applicantResponseBody.Name != "Garrett" {
-		t.Errorf("Expected name to be Garrett, but got: %s", applicantResponseBody.Name)
-	}
+	assert.Equal("Garrett", applicantResponseBody.ApplicantName.String())
 
-	if !*applicantResponseBody.Correct {
-		t.Errorf("Expected solution to be correct, but got: %v", applicantResponseBody.Correct)
-	}
+	assert.True(applicantResponseBody.Correct)
 }
 
 func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithIncorrectSolution(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -91,10 +84,6 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithIncorrectSolution(t *tes
 
 	registerResp, err := RegisterSampleApplicantWithNUID(app, *nuid)
 
-	if registerResp.HttpStatus != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", registerResp.HttpStatus)
-	}
-
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
 	}
@@ -105,9 +94,7 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithIncorrectSolution(t *tes
 		t.Errorf("Failed to submit solution: %v", err)
 	}
 
-	if submitResp.StatusCode != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", submitResp.StatusCode)
-	}
+	assert.Equal(200, submitResp.StatusCode)
 
 	var submitResponseBody handlers.SubmitResponseBody
 
@@ -115,13 +102,9 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithIncorrectSolution(t *tes
 		t.Errorf("Failed to parse response body: %v", err)
 	}
 
-	if submitResponseBody.Correct {
-		t.Errorf("Expected solution to be correct, but got: %v", submitResponseBody.Correct)
-	}
+	assert.False(submitResponseBody.Correct)
 
-	if submitResponseBody.Message != "Incorrect Solution" {
-		t.Errorf("Expected message to be 'Incorrect Solution', but got: %v", submitResponseBody.Message)
-	}
+	assert.Equal("Incorrect Solution", submitResponseBody.Message)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/applicant/%s", app.Address, nuid.String()), nil)
 
@@ -131,30 +114,23 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithIncorrectSolution(t *tes
 		t.Errorf("Failed to make request: %v", err)
 	}
 
-	if resp.StatusCode != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", resp.StatusCode)
-	}
+	assert.Equal(200, resp.StatusCode)
 
-	var applicantResponseBody storage.ApplicantResult
+	var applicantResponseBody handlers.ApplicantResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&applicantResponseBody); err != nil {
 		t.Errorf("Failed to parse response body: %v", err)
 	}
 
-	if applicantResponseBody.NUID != *nuid {
-		t.Errorf("Expected NUID to be %s, but got: %s", nuid.String(), applicantResponseBody.NUID)
-	}
+	assert.Equal(*nuid, applicantResponseBody.NUID)
 
-	if applicantResponseBody.Name != "Garrett" {
-		t.Errorf("Expected name to be Garrett, but got: %s", applicantResponseBody.Name)
-	}
+	assert.Equal("Garrett", applicantResponseBody.ApplicantName.String())
 
-	if *applicantResponseBody.Correct {
-		t.Errorf("Expected solution to be incorrect, but got: %v", applicantResponseBody.Correct)
-	}
+	assert.False(applicantResponseBody.Correct)
 }
 
 func TestApplicant_ReturnsA400ForInvalidNUID(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -171,9 +147,7 @@ func TestApplicant_ReturnsA400ForInvalidNUID(t *testing.T) {
 		t.Errorf("Failed to make request: %v", err)
 	}
 
-	if resp.StatusCode != 400 {
-		t.Errorf("Expected status code to be 400, but got: %v", resp.StatusCode)
-	}
+	assert.Equal(400, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 
@@ -183,12 +157,11 @@ func TestApplicant_ReturnsA400ForInvalidNUID(t *testing.T) {
 
 	responseString := string(body)
 
-	if responseString != fmt.Sprintf("invalid NUID %s", badNUID) {
-		t.Errorf("Expected response body to be 'invalid NUID %s', but got: %s", badNUID, responseString)
-	}
+	assert.Equal(fmt.Sprintf("invalid NUID %s", badNUID), responseString)
 }
 
 func TestApplicant_ReturnsA404ForValidNUIDThatDoesNotExistInDB(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -209,9 +182,7 @@ func TestApplicant_ReturnsA404ForValidNUIDThatDoesNotExistInDB(t *testing.T) {
 		t.Errorf("Failed to make request: %v", err)
 	}
 
-	if resp.StatusCode != 404 {
-		t.Errorf("Expected status code to be 404, but got: %v", resp.StatusCode)
-	}
+	assert.Equal(404, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 
@@ -221,7 +192,5 @@ func TestApplicant_ReturnsA404ForValidNUIDThatDoesNotExistInDB(t *testing.T) {
 
 	responseString := string(body)
 
-	if responseString != fmt.Sprintf("Applicant with NUID %s not found!", nonexistentNUID) {
-		t.Errorf("Expected response body to be 'Applicant with NUID %s not found!', but got: %s", nonexistentNUID, responseString)
-	}
+	assert.Equal(fmt.Sprintf("Applicant with NUID %s not found!", nonexistentNUID.String()), responseString)
 }

@@ -5,10 +5,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHealthCheckWorks(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -23,7 +24,5 @@ func TestHealthCheckWorks(t *testing.T) {
 		t.Errorf("Expected no error, but got: %v", err)
 	}
 
-	if resp.StatusCode != fiber.StatusOK {
-		t.Errorf("Expected status code 200, but got: %v", resp.StatusCode)
-	}
+	assert.Equal(200, resp.StatusCode)
 }

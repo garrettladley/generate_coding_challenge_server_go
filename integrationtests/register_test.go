@@ -11,6 +11,7 @@ import (
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
 	"github.com/garrettladley/generate_coding_challenge_server_go/storage"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 type RegisterDB struct {
@@ -21,6 +22,7 @@ type RegisterDB struct {
 }
 
 func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -33,16 +35,10 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 		t.Errorf("Failed to register applicant: %v", err)
 	}
 
-	if resp.HttpStatus != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", resp.HttpStatus)
-	}
-
 	numRandom := 100
 	numMandatory := 7
 
-	if len(resp.Challenge) != numRandom+numMandatory {
-		t.Errorf("Expected 'challenge' length to be %v, but got: %v", numRandom+numMandatory, len(resp.Challenge))
-	}
+	assert.Equal(numRandom+numMandatory, len(resp.Challenge))
 
 	var dbResult RegisterDB
 
@@ -52,9 +48,10 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 		t.Errorf("Failed to query database: %v", err)
 	}
 
-	if !dbResult.ApplicantName.Valid && !dbResult.NUID.Valid && !dbResult.Token.Valid && len(dbResult.Challenge) == 0 {
-		t.Error("Expected database to contain applicant name, nuid, token, and challenge, but it did not")
-	}
+	assert.True(dbResult.ApplicantName.Valid)
+	assert.True(dbResult.NUID.Valid)
+	assert.True(dbResult.Token.Valid)
+	assert.True(len(dbResult.Challenge) > 0)
 
 	name, err := domain.ParseApplicantName(dbResult.ApplicantName.String)
 
@@ -74,36 +71,21 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 		t.Errorf("Failed to parse token due to invalid database state: %v", err)
 	}
 
-	if name.String() != "Garrett" {
-		t.Errorf("Expected applicant name to be 'Garrett', but got: %v", name)
-	}
+	assert.Equal("Garrett", name.String())
 
-	if nuid.String() != "002172052" {
-		t.Errorf("Expected NUID to be '002172052', but got: %v", nuid)
-	}
+	assert.Equal("002172052", nuid.String())
 
-	if token != *resp.Token {
-		t.Errorf("Expected token to be '%v', but got: %v", resp.Token, token)
-	}
+	assert.Equal(token, resp.Token)
 
-	if len(dbResult.Challenge) != numRandom+numMandatory {
-		t.Errorf("Expected 'challenge' length to be %v, but got: %v", numRandom+numMandatory, len(dbResult.Challenge))
-	}
+	assert.Equal(len(resp.Challenge), len(dbResult.Challenge))
 
-	equal := true
-	for i := range dbResult.Challenge {
-		if dbResult.Challenge[i] != resp.Challenge[i] {
-			equal = false
-			break
-		}
-	}
-
-	if !equal {
-		t.Errorf("Expected challenge to be '%v', but got: %v", resp.Challenge, dbResult.Challenge)
+	for i := 0; i < len(resp.Challenge); i++ {
+		assert.Equal(resp.Challenge[i], dbResult.Challenge[i])
 	}
 }
 
 func TestRegister_ReturnsA400WhenRequestBodyPropertiesAreMissing(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -138,25 +120,24 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesAreMissing(t *testing.T) {
 			t.Errorf("Failed to register applicant: %v", err)
 		}
 
-		if resp.StatusCode != 400 {
-			t.Errorf("Expected status code to be 400, but got: %v", resp.StatusCode)
-		}
+		assert.Equal(400, resp.StatusCode)
 
 		var dbResult RegisterDB
 
 		err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid FROM applicants;")
 
-		if err != nil {
-			if dbResult.ApplicantName.Valid && dbResult.NUID.Valid && err != sql.ErrNoRows {
-				t.Errorf("Expected database to be empty, but got: %v", err)
-			}
-		} else if dbResult.ApplicantName.Valid || dbResult.NUID.Valid {
-			t.Errorf("Expected database to be empty, but got: %v", err)
-		}
+		assert.True(err != nil)
+
+		assert.False(dbResult.ApplicantName.Valid)
+
+		assert.False(dbResult.NUID.Valid)
+
+		assert.True(err == sql.ErrNoRows)
 	}
 }
 
 func TestRegister_ReturnsA400WhenRequestBodyPropertiesArePresentButInvalid(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -193,25 +174,24 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesArePresentButInvalid(t *te
 			t.Errorf("Failed to register applicant: %v", err)
 		}
 
-		if resp.StatusCode != 400 {
-			t.Errorf("Expected status code to be 400, but got: %v", resp.StatusCode)
-		}
+		assert.Equal(400, resp.StatusCode)
 
 		var dbResult RegisterDB
 
 		err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid FROM applicants;")
 
-		if err != nil {
-			if dbResult.ApplicantName.Valid && dbResult.NUID.Valid && err != sql.ErrNoRows {
-				t.Errorf("Expected database to be empty, but got: %v", err)
-			}
-		} else if dbResult.ApplicantName.Valid || dbResult.NUID.Valid {
-			t.Errorf("Expected database to be empty, but got: %v", err)
-		}
+		assert.True(err != nil)
+
+		assert.False(dbResult.ApplicantName.Valid)
+
+		assert.False(dbResult.NUID.Valid)
+
+		assert.True(err == sql.ErrNoRows)
 	}
 }
 
 func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -224,25 +204,19 @@ func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
 		t.Errorf("Failed to parse NUID: %v", err)
 	}
 
-	resp, err := RegisterSampleApplicantWithNUID(app, *nuid)
+	_, err = RegisterSampleApplicantWithNUID(app, *nuid)
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
 	}
 
-	if resp.HttpStatus != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", resp.HttpStatus)
-	}
-
-	resp, err = RegisterSampleApplicantWithNUID(app, *nuid)
+	resp, err := RegisterRequest(app, *nuid)
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
 	}
 
-	if resp.HttpStatus != 409 {
-		t.Errorf("Expected status code to be 409, but got: %v", resp.HttpStatus)
-	}
+	assert.Equal(409, resp.StatusCode)
 
 	var count int
 
@@ -252,7 +226,5 @@ func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
 		t.Errorf("Failed to query database: %v", err)
 	}
 
-	if count != 1 {
-		t.Errorf("Expected database to contain 1 applicant, but got: %v", count)
-	}
+	assert.Equal(1, count)
 }

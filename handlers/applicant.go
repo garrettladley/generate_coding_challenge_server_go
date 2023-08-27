@@ -7,6 +7,7 @@ import (
 	"github.com/garrettladley/generate_coding_challenge_server_go/storage"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type ApplicantHandler storage.ApplicantStorage
@@ -20,21 +21,28 @@ type RegisterRequestBody struct {
 	RawNUID          string `json:"nuid"`
 }
 
+type RegisterResponse struct {
+	Token     uuid.UUID `json:"token"`
+	Challenge []string  `json:"challenge"`
+}
+
 func (a *ApplicantHandler) Register(c *fiber.Ctx) error {
 	var registerRequestBody RegisterRequestBody
 
 	if err := c.BodyParser(&registerRequestBody); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid request body %s", registerRequestBody))
+		return c.Status(fiber.StatusBadRequest).SendString(fmt.Sprintf("invalid request body %s", registerRequestBody))
 	}
 
 	nuid, err := domain.ParseNUID(registerRequestBody.RawNUID)
+
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid NUID %s", registerRequestBody.RawNUID))
+		return c.Status(fiber.StatusBadRequest).SendString(fmt.Sprintf("invalid NUID %s", registerRequestBody.RawNUID))
 	}
 
 	applicantName, err := domain.ParseApplicantName(registerRequestBody.RawApplicantName)
+
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid applicant name %s", registerRequestBody.RawApplicantName))
+		return c.Status(fiber.StatusBadRequest).SendString(fmt.Sprintf("invalid applicant name %s", registerRequestBody.RawApplicantName))
 	}
 
 	result, err := (*storage.ApplicantStorage)(a).Register(domain.Applicant{
@@ -43,14 +51,19 @@ func (a *ApplicantHandler) Register(c *fiber.Ctx) error {
 	})
 
 	if err != nil {
-		return err
+		pgErr, isPGError := err.(*pq.Error)
+		if isPGError && pgErr.Code == "23505" {
+			return c.Status(fiber.StatusConflict).SendString(fmt.Sprintf("NUID %s has already registered! Use the forgot_token endpoint to retrieve your token.", nuid))
+		} else {
+			return err
+		}
 	}
 
-	if result.HttpStatus == 409 {
-		return c.Status(result.HttpStatus).JSON(result)
-	}
+	return c.Status(fiber.StatusOK).JSON(result)
+}
 
-	return c.JSON(result)
+type ForgotTokenResponse struct {
+	Token uuid.UUID `json:"token"`
 }
 
 func (a *ApplicantHandler) ForgotToken(c *fiber.Ctx) error {
@@ -58,20 +71,30 @@ func (a *ApplicantHandler) ForgotToken(c *fiber.Ctx) error {
 
 	nuid, err := domain.ParseNUID(rawNUID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid NUID %s", rawNUID))
+		return c.Status(fiber.StatusBadRequest).SendString(fmt.Sprintf("invalid NUID %s", rawNUID))
 	}
 
 	result, err := (*storage.ApplicantStorage)(a).ForgotToken(*nuid)
 
-	if err != nil {
+	if err != nil && !result.Token.Valid {
+		return c.Status(fiber.StatusNotFound).SendString(fmt.Sprintf("Applicant with NUID %s not found!", nuid))
+	} else if err != nil {
 		return err
 	}
 
-	if result.HttpStatus == 404 {
-		return c.Status(result.HttpStatus).SendString(result.Message)
+	token, err := uuid.Parse(result.Token.String)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("invalid database state! Error: %v", err))
 	}
 
-	return c.JSON(result)
+	return c.Status(fiber.StatusOK).JSON(ForgotTokenResponse{
+		Token: token,
+	})
+}
+
+type ChallengeResponse struct {
+	Challenge []string `json:"challenge"`
 }
 
 func (a *ApplicantHandler) Challenge(c *fiber.Ctx) error {
@@ -79,20 +102,20 @@ func (a *ApplicantHandler) Challenge(c *fiber.Ctx) error {
 
 	token, err := uuid.Parse(rawToken)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid token %s", rawToken))
+		return c.Status(fiber.StatusBadRequest).SendString(fmt.Sprintf("invalid token %s", rawToken))
 	}
 
 	result, err := (*storage.ApplicantStorage)(a).Challenge(token)
 
-	if err != nil {
+	if err != nil && len(result.Challenge) == 0 {
+		return c.Status(fiber.StatusNotFound).SendString(fmt.Sprintf("Record associated with token %s not found!", token))
+	} else if err != nil {
 		return err
 	}
 
-	if result.HttpStatus == 404 {
-		return c.Status(result.HttpStatus).SendString(result.Message)
-	}
-
-	return c.JSON(result)
+	return c.Status(fiber.StatusOK).JSON(ChallengeResponse{
+		Challenge: result.Challenge,
+	})
 }
 
 type SubmitRequestBody []string
@@ -123,18 +146,30 @@ func (a *ApplicantHandler) Submit(c *fiber.Ctx) error {
 		return err
 	}
 
-	if result.HttpStatus == 404 {
-		return c.Status(result.HttpStatus).SendString(result.Message)
+	if !result.NUID.Valid && len(result.Solution) == 0 {
+		return c.Status(fiber.StatusNotFound).SendString(fmt.Sprintf("Record associated with token %s not found!", token))
 	}
 
-	if result.Correct {
+	nuid, err := domain.ParseNUID(result.NUID.String)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("invalid database state! Error: %v", err))
+	}
+
+	correct, err := (*storage.ApplicantStorage)(a).WriteSubmit(*nuid, result.Solution, submitRequestBody)
+
+	if err != nil {
+		return err
+	}
+
+	if correct {
 		return c.JSON(SubmitResponseBody{
-			Correct: result.Correct,
+			Correct: correct,
 			Message: "Correct - nice work!",
 		})
 	} else {
 		return c.JSON(SubmitResponseBody{
-			Correct: result.Correct,
+			Correct: correct,
 			Message: "Incorrect Solution",
 		})
 	}

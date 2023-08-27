@@ -3,7 +3,6 @@ package storage
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -22,10 +21,8 @@ func NewApplicantStorage(conn *sqlx.DB) *ApplicantStorage {
 }
 
 type RegisterResult struct {
-	Token      *uuid.UUID `json:"token,omitempty"`
-	Challenge  []string   `json:"challenge,omitempty"`
-	Message    string     `json:"message,omitempty"`
-	HttpStatus int        `json:"-"`
+	Token     uuid.UUID
+	Challenge []string
 }
 
 func (s *ApplicantStorage) Register(applicant domain.Applicant) (RegisterResult, error) {
@@ -43,49 +40,25 @@ func (s *ApplicantStorage) Register(applicant domain.Applicant) (RegisterResult,
 	_, err := s.Conn.Exec(insertSataement, applicant.NUID, applicant.Name, registrationTime, token, pq.Array(challenge.Challenge), pq.Array(challenge.Solution))
 
 	if err != nil {
-		pgErr, isPGError := err.(*pq.Error)
-		if isPGError && pgErr.Code == "23505" {
-			return RegisterResult{Message: fmt.Sprintf("NUID %s has already registered! Use the forgot_token endpoint to retrieve your token.", applicant.NUID), HttpStatus: 409}, nil
-		}
 		return RegisterResult{}, err
 	}
 
-	return RegisterResult{Token: &token, Challenge: challenge.Challenge}, nil
-}
-
-type ForgotTokenResult struct {
-	Message    string    `json:"message,omitempty"`
-	Token      uuid.UUID `json:"token"`
-	HttpStatus int       `json:"-"`
+	return RegisterResult{Token: token, Challenge: challenge.Challenge}, nil
 }
 
 type ForgotTokenDB struct {
 	Token sql.NullString `db:"token"`
 }
 
-func (s *ApplicantStorage) ForgotToken(nuid domain.NUID) (ForgotTokenResult, error) {
+func (s *ApplicantStorage) ForgotToken(nuid domain.NUID) (ForgotTokenDB, error) {
 	var dbResult ForgotTokenDB
 	err := s.Conn.Get(&dbResult, "SELECT token FROM applicants WHERE nuid=$1;", nuid)
 
-	if !dbResult.Token.Valid {
-		return ForgotTokenResult{Message: fmt.Sprintf("Applicant with NUID %s not found!", nuid), HttpStatus: 404}, nil
-	} else if err != nil {
-		return ForgotTokenResult{}, err
-	}
-
-	token, err := uuid.Parse(dbResult.Token.String)
-
 	if err != nil {
-		return ForgotTokenResult{}, err
+		return ForgotTokenDB{}, err
 	}
 
-	return ForgotTokenResult{Token: token}, nil
-}
-
-type ChallengeResult struct {
-	Message    string   `json:"message,omitempty"`
-	Challenge  []string `json:"challenge"`
-	HttpStatus int      `json:"-"`
+	return dbResult, nil
 }
 
 type ChallengeDB struct {
@@ -130,17 +103,15 @@ func (a *StringArray) Scan(src interface{}) error {
 	return nil
 }
 
-func (s *ApplicantStorage) Challenge(token uuid.UUID) (ChallengeResult, error) {
+func (s *ApplicantStorage) Challenge(token uuid.UUID) (ChallengeDB, error) {
 	var dbResult ChallengeDB
 	err := s.Conn.Get(&dbResult, "SELECT challenge FROM applicants WHERE token=$1;", token)
 
-	if len(dbResult.Challenge) == 0 && err != nil {
-		return ChallengeResult{Message: fmt.Sprintf("Record associated with token %s not found!", token), HttpStatus: 404}, nil
-	} else if err != nil {
-		return ChallengeResult{}, err
+	if err != nil {
+		return ChallengeDB{}, err
 	}
 
-	return ChallengeResult{Challenge: dbResult.Challenge}, nil
+	return dbResult, nil
 }
 
 type SubmitResult struct {
@@ -153,38 +124,18 @@ type SubmitDB struct {
 	Solution StringArray    `db:"solution"`
 }
 
-type WriteSubmitDB struct {
-	NUID    domain.NUID
-	Correct bool
-}
-
-func (s *ApplicantStorage) Submit(token uuid.UUID, givenSolution []string) (SubmitResult, error) {
+func (s *ApplicantStorage) Submit(token uuid.UUID, givenSolution []string) (SubmitDB, error) {
 	var dbResult SubmitDB
 	err := s.Conn.Get(&dbResult, "SELECT nuid, solution FROM applicants WHERE token=$1;", token)
-	if err != nil {
-		return SubmitResult{}, err
-	}
-
-	if !dbResult.NUID.Valid && len(dbResult.Solution) == 0 {
-		return SubmitResult{Message: fmt.Sprintf("Record associated with token %s not found!", token), HttpStatus: 404}, nil
-	}
-
-	nuid, err := domain.ParseNUID(dbResult.NUID.String)
 
 	if err != nil {
-		return SubmitResult{}, fmt.Errorf("invalid database state!. Error: %v", err)
+		return SubmitDB{}, err
 	}
 
-	correct, err := s.writeSubmit(*nuid, givenSolution, dbResult.Solution)
-
-	if err != nil {
-		return SubmitResult{}, err
-	}
-
-	return SubmitResult{Correct: correct}, nil
+	return dbResult, nil
 }
 
-func (s *ApplicantStorage) writeSubmit(nuid domain.NUID, givenSolution []string, actualSolution []string) (bool, error) {
+func (s *ApplicantStorage) WriteSubmit(nuid domain.NUID, givenSolution []string, actualSolution []string) (bool, error) {
 	var correct bool
 	if len(givenSolution) == len(actualSolution) {
 		correct = true

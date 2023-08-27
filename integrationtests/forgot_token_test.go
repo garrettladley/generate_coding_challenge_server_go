@@ -7,9 +7,11 @@ import (
 	"testing"
 
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestForgot_Token_ReturnsA200ForNUIDThatExists(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -28,10 +30,6 @@ func TestForgot_Token_ReturnsA200ForNUIDThatExists(t *testing.T) {
 		t.Errorf("Failed to register applicant: %v", err)
 	}
 
-	if registerResp.HttpStatus != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", registerResp.HttpStatus)
-	}
-
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/forgot_token/%s", app.Address, nuid), nil)
 
 	if err != nil {
@@ -44,9 +42,7 @@ func TestForgot_Token_ReturnsA200ForNUIDThatExists(t *testing.T) {
 		t.Errorf("Failed to execute request: %v", err)
 	}
 
-	if forgotTokenResp.StatusCode != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", forgotTokenResp.StatusCode)
-	}
+	assert.Equal(200, forgotTokenResp.StatusCode)
 
 	token, err := GetTokenFromResponse(forgotTokenResp)
 
@@ -54,12 +50,11 @@ func TestForgot_Token_ReturnsA200ForNUIDThatExists(t *testing.T) {
 		t.Errorf("Failed to get token from response: %v", err)
 	}
 
-	if token.String() != registerResp.Token.String() {
-		t.Errorf("Expected token to be %s, but got: %v", registerResp.Token, token)
-	}
+	assert.Equal(&registerResp.Token, token)
 }
 
 func TestForgot_Token_ReturnssA400ForInvalidNUID(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -80,9 +75,7 @@ func TestForgot_Token_ReturnssA400ForInvalidNUID(t *testing.T) {
 		t.Errorf("Failed to execute request: %v", err)
 	}
 
-	if resp.StatusCode != 400 {
-		t.Errorf("Expected status code to be 400, but got: %v", resp.StatusCode)
-	}
+	assert.Equal(400, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 
@@ -92,12 +85,11 @@ func TestForgot_Token_ReturnssA400ForInvalidNUID(t *testing.T) {
 
 	responseString := string(body)
 
-	if responseString != fmt.Sprintf("invalid NUID %s", badNUID) {
-		t.Errorf("Expected response body to be 'invalid NUID %s', but got: %s", badNUID, responseString)
-	}
+	assert.Equal(fmt.Sprintf("invalid NUID %s", badNUID), responseString)
 }
 
 func TestForgot_Token_ReturnssA400ForNUIDThatDoesNotExistInDB(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -118,9 +110,7 @@ func TestForgot_Token_ReturnssA400ForNUIDThatDoesNotExistInDB(t *testing.T) {
 		t.Errorf("Failed to make request: %v", err)
 	}
 
-	if resp.StatusCode != 404 {
-		t.Errorf("Expected status code to be 404, but got: %v", resp.StatusCode)
-	}
+	assert.Equal(404, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 
@@ -130,7 +120,5 @@ func TestForgot_Token_ReturnssA400ForNUIDThatDoesNotExistInDB(t *testing.T) {
 
 	responseString := string(body)
 
-	if responseString != fmt.Sprintf("Applicant with NUID %s not found!", nonexistentNUID) {
-		t.Errorf("Expected response body to be 'Applicant with NUID %s not found!', but got: %s", nonexistentNUID, responseString)
-	}
+	assert.Equal(fmt.Sprintf("Applicant with NUID %s not found!", nonexistentNUID), responseString)
 }

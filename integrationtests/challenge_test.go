@@ -7,9 +7,11 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestChallenge_ReturnsA200ForTokenThatExists(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -20,10 +22,6 @@ func TestChallenge_ReturnsA200ForTokenThatExists(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
-	}
-
-	if registerResp.HttpStatus != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", registerResp.HttpStatus)
 	}
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/challenge/%s", app.Address, registerResp.Token), nil)
@@ -38,9 +36,7 @@ func TestChallenge_ReturnsA200ForTokenThatExists(t *testing.T) {
 		t.Errorf("Failed to execute request: %v", err)
 	}
 
-	if challengeResp.StatusCode != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", challengeResp.StatusCode)
-	}
+	assert.Equal(200, challengeResp.StatusCode)
 
 	challengeRespChallenge, err := GetChallengeFromResponse(challengeResp)
 
@@ -48,24 +44,15 @@ func TestChallenge_ReturnsA200ForTokenThatExists(t *testing.T) {
 		t.Errorf("Failed to get challenge from response: %v", err)
 	}
 
-	if len(registerResp.Challenge) != len(challengeRespChallenge) {
-		t.Errorf("Expected challenge to be %v, but got: %v", registerResp.Challenge, challengeRespChallenge)
-	}
+	assert.Equal(len(registerResp.Challenge), len(challengeRespChallenge))
 
-	equal := true
-	for i := range registerResp.Challenge {
-		if registerResp.Challenge[i] != challengeRespChallenge[i] {
-			equal = false
-			break
-		}
-	}
-
-	if !equal {
-		t.Errorf("Expected challenge to be %v, but got: %v", registerResp.Challenge, challengeRespChallenge)
+	for i := 0; i < len(registerResp.Challenge); i++ {
+		assert.Equal(registerResp.Challenge[i], challengeRespChallenge[i])
 	}
 }
 
 func TestChallenge_ReturnsA400ForInvalidToken(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -86,9 +73,7 @@ func TestChallenge_ReturnsA400ForInvalidToken(t *testing.T) {
 		t.Errorf("Failed to execute request: %v", err)
 	}
 
-	if challengeResp.StatusCode != 400 {
-		t.Errorf("Expected status code to be 200, but got: %v", challengeResp.StatusCode)
-	}
+	assert.Equal(400, challengeResp.StatusCode)
 
 	body, err := io.ReadAll(challengeResp.Body)
 
@@ -98,12 +83,11 @@ func TestChallenge_ReturnsA400ForInvalidToken(t *testing.T) {
 
 	responseString := string(body)
 
-	if responseString != fmt.Sprintf("invalid token %s", invalidToken) {
-		t.Errorf("Expected response body to be 'invalid token %s', but got: %v", invalidToken, responseString)
-	}
+	assert.Equal(fmt.Sprintf("invalid token %s", invalidToken), responseString)
 }
 
 func TestChallenge_ReturnsA404ForTokenThatDoesNotExistInDB(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -124,9 +108,7 @@ func TestChallenge_ReturnsA404ForTokenThatDoesNotExistInDB(t *testing.T) {
 		t.Errorf("Failed to execute request: %v", err)
 	}
 
-	if challengeResp.StatusCode != 404 {
-		t.Errorf("Expected status code to be 200, but got: %v", challengeResp.StatusCode)
-	}
+	assert.Equal(404, challengeResp.StatusCode)
 
 	body, err := io.ReadAll(challengeResp.Body)
 
@@ -136,7 +118,5 @@ func TestChallenge_ReturnsA404ForTokenThatDoesNotExistInDB(t *testing.T) {
 
 	responseString := string(body)
 
-	if responseString != fmt.Sprintf("Record associated with token %s not found!", nonexistentToken) {
-		t.Errorf("Expected response body to be 'Record associated with token %s not found!', but got: %s", nonexistentToken, responseString)
-	}
+	assert.Equal(fmt.Sprintf("Record associated with token %s not found!", nonexistentToken), responseString)
 }

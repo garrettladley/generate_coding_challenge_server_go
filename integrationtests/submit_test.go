@@ -10,9 +10,11 @@ import (
 
 	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
 	"github.com/garrettladley/generate_coding_challenge_server_go/handlers"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSubmit_ReturnsA200ForCorrectSolution(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -25,22 +27,21 @@ func TestSubmit_ReturnsA200ForCorrectSolution(t *testing.T) {
 		t.Errorf("Failed to submit solution: %v", err)
 	}
 
+	assert.Equal(200, submitResp.StatusCode)
+
 	var submitResponseBody handlers.SubmitResponseBody
 
 	if err := json.NewDecoder(submitResp.Body).Decode(&submitResponseBody); err != nil {
 		t.Errorf("Failed to parse response body: %v", err)
 	}
 
-	if !submitResponseBody.Correct {
-		t.Errorf("Expected solution to be correct, but got: %v", submitResponseBody.Correct)
-	}
+	assert.True(submitResponseBody.Correct)
 
-	if submitResponseBody.Message != "Correct - nice work!" {
-		t.Errorf("Expected message to be 'Correct - nice work!', but got: %v", submitResponseBody.Message)
-	}
+	assert.Equal("Correct - nice work!", submitResponseBody.Message)
 }
 
 func TestSubmit_ReturnsA200ForIncorrectSolution(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -48,10 +49,6 @@ func TestSubmit_ReturnsA200ForIncorrectSolution(t *testing.T) {
 	}
 
 	registerResp, err := RegisterSampleApplicant(app)
-
-	if registerResp.HttpStatus != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", registerResp.HttpStatus)
-	}
 
 	if err != nil {
 		t.Errorf("Failed to register applicant: %v", err)
@@ -63,9 +60,7 @@ func TestSubmit_ReturnsA200ForIncorrectSolution(t *testing.T) {
 		t.Errorf("Failed to submit solution: %v", err)
 	}
 
-	if submitResp.StatusCode != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", submitResp.StatusCode)
-	}
+	assert.Equal(200, submitResp.StatusCode)
 
 	var submitResponseBody handlers.SubmitResponseBody
 
@@ -73,16 +68,13 @@ func TestSubmit_ReturnsA200ForIncorrectSolution(t *testing.T) {
 		t.Errorf("Failed to parse response body: %v", err)
 	}
 
-	if submitResponseBody.Correct {
-		t.Errorf("Expected solution to be incorrect, but got: %v", submitResponseBody.Correct)
-	}
+	assert.False(submitResponseBody.Correct)
 
-	if submitResponseBody.Message != "Incorrect Solution" {
-		t.Errorf("Expected message to be 'Incorrect Solution', but got: %v", submitResponseBody.Message)
-	}
+	assert.Equal("Incorrect Solution", submitResponseBody.Message)
 }
 
 func TestSubmit_ReturnsA400ForInvalidToken(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -110,9 +102,7 @@ func TestSubmit_ReturnsA400ForInvalidToken(t *testing.T) {
 		t.Errorf("Failed to execute request: %v", err)
 	}
 
-	if submitResp.StatusCode != 400 {
-		t.Errorf("Expected status code to be 400, but got: %v", submitResp.StatusCode)
-	}
+	assert.Equal(400, submitResp.StatusCode)
 
 	body, err = io.ReadAll(submitResp.Body)
 
@@ -122,12 +112,11 @@ func TestSubmit_ReturnsA400ForInvalidToken(t *testing.T) {
 
 	responseString := string(body)
 
-	if responseString != fmt.Sprintf("invalid token %s", invalidToken) {
-		t.Errorf("Expected response body to be 'invalid token %s', but got: %v", invalidToken, responseString)
-	}
+	assert.Equal(fmt.Sprintf("invalid token %s", invalidToken), responseString)
 }
 
 func TestSubmit_ReturnsIncorrectAfterSubmittingCorrectSolutionThenIncorrectSolution(t *testing.T) {
+	assert := assert.New(t)
 	app, err := SpawnApp()
 
 	if err != nil {
@@ -146,19 +135,17 @@ func TestSubmit_ReturnsIncorrectAfterSubmittingCorrectSolutionThenIncorrectSolut
 		t.Errorf("Failed to submit solution: %v", err)
 	}
 
+	assert.Equal(200, submitResp.StatusCode)
+
 	var submitCorrectResponseBody handlers.SubmitResponseBody
 
 	if err := json.NewDecoder(submitResp.Body).Decode(&submitCorrectResponseBody); err != nil {
 		t.Errorf("Failed to parse response body: %v", err)
 	}
 
-	if !submitCorrectResponseBody.Correct {
-		t.Errorf("Expected solution to be correct, but got: %v", submitCorrectResponseBody.Correct)
-	}
+	assert.True(submitCorrectResponseBody.Correct)
 
-	if submitCorrectResponseBody.Message != "Correct - nice work!" {
-		t.Errorf("Expected message to be 'Correct - nice work!', but got: %v", submitCorrectResponseBody.Message)
-	}
+	assert.Equal("Correct - nice work!", submitCorrectResponseBody.Message)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/forgot_token/%s", app.Address, nuid), nil)
 
@@ -172,9 +159,7 @@ func TestSubmit_ReturnsIncorrectAfterSubmittingCorrectSolutionThenIncorrectSolut
 		t.Errorf("Failed to execute request: %v", err)
 	}
 
-	if forgotTokenResp.StatusCode != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", forgotTokenResp.StatusCode)
-	}
+	assert.Equal(200, forgotTokenResp.StatusCode)
 
 	token, err := GetTokenFromResponse(forgotTokenResp)
 
@@ -188,9 +173,7 @@ func TestSubmit_ReturnsIncorrectAfterSubmittingCorrectSolutionThenIncorrectSolut
 		t.Errorf("Failed to submit solution: %v", err)
 	}
 
-	if submitResp.StatusCode != 200 {
-		t.Errorf("Expected status code to be 200, but got: %v", submitResp.StatusCode)
-	}
+	assert.Equal(200, submitResp.StatusCode)
 
 	var submitResponseBody handlers.SubmitResponseBody
 
@@ -198,11 +181,7 @@ func TestSubmit_ReturnsIncorrectAfterSubmittingCorrectSolutionThenIncorrectSolut
 		t.Errorf("Failed to parse response body: %v", err)
 	}
 
-	if submitResponseBody.Correct {
-		t.Errorf("Expected solution to be incorrect, but got: %v", submitResponseBody.Correct)
-	}
+	assert.False(submitResponseBody.Correct)
 
-	if submitResponseBody.Message != "Incorrect Solution" {
-		t.Errorf("Expected message to be 'Incorrect Solution', but got: %v", submitResponseBody.Message)
-	}
+	assert.Equal("Incorrect Solution", submitResponseBody.Message)
 }
