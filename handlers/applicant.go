@@ -162,15 +162,19 @@ func (a *ApplicantHandler) Submit(c *fiber.Ctx) error {
 		return err
 	}
 
+	var response SubmitResponseBody
+
 	if correct {
-		return c.JSON(SubmitResponseBody{
+		response = SubmitResponseBody{
 			Correct: correct,
 			Message: "Correct - nice work!",
-		})
+		}
 	} else {
-		return c.JSON(SubmitResponseBody{
+		response = SubmitResponseBody{
 			Correct: correct,
 			Message: "Incorrect Solution",
-		})
+		}
 	}
+
+	return c.Status(fiber.StatusOK).JSON(response)
 }
