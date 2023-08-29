@@ -1,4 +1,4 @@
-package integrationtests
+package tests
 
 import (
 	"bytes"
@@ -25,15 +25,11 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	resp, err := RegisterSampleApplicant(app)
 
-	if err != nil {
-		t.Errorf("Failed to register applicant: %v", err)
-	}
+	assert.Nil(err)
 
 	numRandom := 100
 	numMandatory := 7
@@ -44,9 +40,7 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 
 	err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid, token, challenge FROM applicants;")
 
-	if err != nil {
-		t.Errorf("Failed to query database: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.True(dbResult.ApplicantName.Valid)
 	assert.True(dbResult.NUID.Valid)
@@ -55,21 +49,15 @@ func TestRegister_ReturnsA200ForValidRequestBody(t *testing.T) {
 
 	name, err := domain.ParseApplicantName(dbResult.ApplicantName.String)
 
-	if err != nil {
-		t.Errorf("Failed to parse applicant name due to invalid database state: %v", err)
-	}
+	assert.Nil(err)
 
 	nuid, err := domain.ParseNUID(dbResult.NUID.String)
 
-	if err != nil {
-		t.Errorf("Failed to parse NUID due to invalid database state: %v", err)
-	}
+	assert.Nil(err)
 
 	token, err := uuid.Parse(dbResult.Token.String)
 
-	if err != nil {
-		t.Errorf("Failed to parse token due to invalid database state: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal("Garrett", name.String())
 
@@ -88,9 +76,7 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesAreMissing(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	testCases := make([]map[string]string, 3)
 
@@ -107,18 +93,14 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesAreMissing(t *testing.T) {
 	for _, testCase := range testCases {
 		body, err := json.Marshal(testCase)
 
-		if err != nil {
-			t.Errorf("Failed to marshal request body: %v", err)
-		}
+		assert.Nil(err)
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("%s/register", app.Address), bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := app.App.Test(req)
 
-		if err != nil {
-			t.Errorf("Failed to register applicant: %v", err)
-		}
+		assert.Nil(err)
 
 		assert.Equal(400, resp.StatusCode)
 
@@ -140,9 +122,7 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesArePresentButInvalid(t *te
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	testCases := make([]map[string]string, 3)
 
@@ -161,18 +141,14 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesArePresentButInvalid(t *te
 	for _, testCase := range testCases {
 		body, err := json.Marshal(testCase)
 
-		if err != nil {
-			t.Errorf("Failed to marshal request body: %v", err)
-		}
+		assert.Nil(err)
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("%s/register", app.Address), bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := app.App.Test(req)
 
-		if err != nil {
-			t.Errorf("Failed to register applicant: %v", err)
-		}
+		assert.Nil(err)
 
 		assert.Equal(400, resp.StatusCode)
 
@@ -180,7 +156,7 @@ func TestRegister_ReturnsA400WhenRequestBodyPropertiesArePresentButInvalid(t *te
 
 		err = app.Conn.Get(&dbResult, "SELECT applicant_name, nuid FROM applicants;")
 
-		assert.True(err != nil)
+		assert.NotNil(err)
 
 		assert.False(dbResult.ApplicantName.Valid)
 
@@ -194,27 +170,19 @@ func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	nuid, err := domain.ParseNUID("002172052")
 
-	if err != nil {
-		t.Errorf("Failed to parse NUID: %v", err)
-	}
+	assert.Nil(err)
 
 	_, err = RegisterSampleApplicantWithNUID(app, *nuid)
 
-	if err != nil {
-		t.Errorf("Failed to register applicant: %v", err)
-	}
+	assert.Nil(err)
 
 	resp, err := RegisterRequest(app, *nuid)
 
-	if err != nil {
-		t.Errorf("Failed to register applicant: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(409, resp.StatusCode)
 
@@ -222,9 +190,7 @@ func TestRegister_ReturnsA409ForUserThatAlreadyExists(t *testing.T) {
 
 	err = app.Conn.Get(&count, "SELECT COUNT(*) FROM applicants WHERE nuid = $1;", nuid.String())
 
-	if err != nil {
-		t.Errorf("Failed to query database: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(1, count)
 }

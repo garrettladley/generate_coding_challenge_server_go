@@ -1,4 +1,4 @@
-package integrationtests
+package tests
 
 import (
 	"encoding/json"
@@ -17,29 +17,22 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithCorrectSolution(t *testi
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	nuid, err := domain.ParseNUID("002172052")
 
-	if err != nil {
-		t.Errorf("Failed to parse NUID: %v", err)
-	}
+	assert.Nil(err)
 
 	submitResp, err := SubmitCorrectSolutionWithNUID(app, *nuid)
 
-	if err != nil {
-		t.Errorf("Failed to submit solution: %v", err)
-	}
-
+	assert.Nil(err)
 	assert.Equal(200, submitResp.StatusCode)
 
 	var submitResponseBody handlers.SubmitResponseBody
 
-	if err := json.NewDecoder(submitResp.Body).Decode(&submitResponseBody); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
+	err = json.NewDecoder(submitResp.Body).Decode(&submitResponseBody)
+
+	assert.Nil(err)
 
 	assert.True(submitResponseBody.Correct)
 
@@ -49,17 +42,14 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithCorrectSolution(t *testi
 
 	resp, err := app.App.Test(req)
 
-	if err != nil {
-		t.Errorf("Failed to make request: %v", err)
-	}
-
+	assert.Nil(err)
 	assert.Equal(200, resp.StatusCode)
 
 	var applicantResponseBody handlers.ApplicantResponse
 
-	if err := json.NewDecoder(resp.Body).Decode(&applicantResponseBody); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
+	err = json.NewDecoder(resp.Body).Decode(&applicantResponseBody)
+
+	assert.Nil(err)
 
 	assert.Equal(*nuid, applicantResponseBody.NUID)
 
@@ -72,35 +62,26 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithIncorrectSolution(t *tes
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	nuid, err := domain.ParseNUID("002172052")
 
-	if err != nil {
-		t.Errorf("Failed to parse NUID: %v", err)
-	}
+	assert.Nil(err)
 
 	registerResp, err := RegisterSampleApplicantWithNUID(app, *nuid)
 
-	if err != nil {
-		t.Errorf("Failed to register applicant: %v", err)
-	}
+	assert.Nil(err)
 
 	submitResp, err := SubmitSolution(app, registerResp, []string{})
 
-	if err != nil {
-		t.Errorf("Failed to submit solution: %v", err)
-	}
-
+	assert.Nil(err)
 	assert.Equal(200, submitResp.StatusCode)
 
 	var submitResponseBody handlers.SubmitResponseBody
 
-	if err := json.NewDecoder(submitResp.Body).Decode(&submitResponseBody); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
+	err = json.NewDecoder(submitResp.Body).Decode(&submitResponseBody)
+
+	assert.Nil(err)
 
 	assert.False(submitResponseBody.Correct)
 
@@ -110,17 +91,15 @@ func TestApplicant_ReturnsA200ForValidNUIDThatExistsWithIncorrectSolution(t *tes
 
 	resp, err := app.App.Test(req)
 
-	if err != nil {
-		t.Errorf("Failed to make request: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(200, resp.StatusCode)
 
 	var applicantResponseBody handlers.ApplicantResponse
 
-	if err := json.NewDecoder(resp.Body).Decode(&applicantResponseBody); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
+	err = json.NewDecoder(resp.Body).Decode(&applicantResponseBody)
+
+	assert.Nil(err)
 
 	assert.Equal(*nuid, applicantResponseBody.NUID)
 
@@ -133,9 +112,7 @@ func TestApplicant_ReturnsA400ForInvalidNUID(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	badNUID := "foo"
 
@@ -143,17 +120,13 @@ func TestApplicant_ReturnsA400ForInvalidNUID(t *testing.T) {
 
 	resp, err := app.App.Test(req)
 
-	if err != nil {
-		t.Errorf("Failed to make request: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(400, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 
-	if err != nil {
-		t.Errorf("Failed to read response body: %v", err)
-	}
+	assert.Nil(err)
 
 	responseString := string(body)
 
@@ -164,31 +137,23 @@ func TestApplicant_ReturnsA404ForValidNUIDThatDoesNotExistInDB(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	nonexistentNUID, err := domain.ParseNUID("002172052")
 
-	if err != nil {
-		t.Errorf("Failed to parse NUID: %v", err)
-	}
+	assert.Nil(err)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/applicant/%s", app.Address, nonexistentNUID.String()), nil)
 
 	resp, err := app.App.Test(req)
 
-	if err != nil {
-		t.Errorf("Failed to make request: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(404, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 
-	if err != nil {
-		t.Errorf("Failed to read response body: %v", err)
-	}
+	assert.Nil(err)
 
 	responseString := string(body)
 

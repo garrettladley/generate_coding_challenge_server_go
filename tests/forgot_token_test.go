@@ -1,4 +1,4 @@
-package integrationtests
+package tests
 
 import (
 	"fmt"
@@ -14,41 +14,29 @@ func TestForgot_Token_ReturnsA200ForNUIDThatExists(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	nuid, err := domain.ParseNUID("002172052")
 
-	if err != nil {
-		t.Errorf("Failed to parse NUID: %v", err)
-	}
+	assert.Nil(err)
 
 	registerResp, err := RegisterSampleApplicantWithNUID(app, *nuid)
 
-	if err != nil {
-		t.Errorf("Failed to register applicant: %v", err)
-	}
+	assert.Nil(err)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/forgot_token/%s", app.Address, nuid), nil)
 
-	if err != nil {
-		t.Errorf("Failed to execute request: %v", err)
-	}
+	assert.Nil(err)
 
 	forgotTokenResp, err := app.App.Test(req)
 
-	if err != nil {
-		t.Errorf("Failed to execute request: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(200, forgotTokenResp.StatusCode)
 
 	token, err := GetTokenFromResponse(forgotTokenResp)
 
-	if err != nil {
-		t.Errorf("Failed to get token from response: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(&registerResp.Token, token)
 }
@@ -57,31 +45,23 @@ func TestForgot_Token_ReturnssA400ForInvalidNUID(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	badNUID := "foo"
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/forgot_token/%s", app.Address, badNUID), nil)
 
-	if err != nil {
-		t.Errorf("Failed to execute request: %v", err)
-	}
+	assert.Nil(err)
 
 	resp, err := app.App.Test(req)
 
-	if err != nil {
-		t.Errorf("Failed to execute request: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(400, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 
-	if err != nil {
-		t.Errorf("Failed to read response body: %v", err)
-	}
+	assert.Nil(err)
 
 	responseString := string(body)
 
@@ -92,31 +72,23 @@ func TestForgot_Token_ReturnssA400ForNUIDThatDoesNotExistInDB(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	nonexistentNUID, err := domain.ParseNUID("002172052")
 
-	if err != nil {
-		t.Errorf("Failed to parse NUID: %v", err)
-	}
+	assert.Nil(err)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/forgot_token/%s", app.Address, nonexistentNUID), nil)
 
 	resp, err := app.App.Test(req)
 
-	if err != nil {
-		t.Errorf("Failed to make request: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(404, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 
-	if err != nil {
-		t.Errorf("Failed to read response body: %v", err)
-	}
+	assert.Nil(err)
 
 	responseString := string(body)
 

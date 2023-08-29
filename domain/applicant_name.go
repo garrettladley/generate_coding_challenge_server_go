@@ -14,6 +14,7 @@ func ParseApplicantName(str string) (*ApplicantName, error) {
 
 	forbiddenCharacters := []rune{'/', '(', ')', '"', '<', '>', '\\', '{', '}'}
 	containsForbiddenCharacters := false
+
 	for _, char := range str {
 		if containsRune(forbiddenCharacters, char) {
 			containsForbiddenCharacters = true
@@ -24,6 +25,7 @@ func ParseApplicantName(str string) (*ApplicantName, error) {
 	if isEmptyOrWhitespace || isTooLong || containsForbiddenCharacters {
 		return nil, fmt.Errorf("invalid name! Given: %s", str)
 	}
+
 	applicantName := ApplicantName(str)
 	return &applicantName, nil
 }

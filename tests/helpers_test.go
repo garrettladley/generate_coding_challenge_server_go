@@ -1,10 +1,15 @@
-package domain
+package tests
 
 import (
 	"testing"
+
+	"github.com/garrettladley/generate_coding_challenge_server_go/domain"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInsertCharAtIndex(t *testing.T) {
+	assert := assert.New(t)
+
 	tests := []struct {
 		input    string
 		char     rune
@@ -20,9 +25,7 @@ func TestInsertCharAtIndex(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := InsertCharAtIndex(test.input, test.char, test.index)
-		if result != test.expected {
-			t.Errorf("For input '%s', expected '%s', but got '%s'", test.input, test.expected, result)
-		}
+		result := domain.InsertCharAtIndex(test.input, test.char, test.index)
+		assert.Equal(test.expected, result)
 	}
 }

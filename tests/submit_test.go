@@ -1,4 +1,4 @@
-package integrationtests
+package tests
 
 import (
 	"bytes"
@@ -17,23 +17,19 @@ func TestSubmit_ReturnsA200ForCorrectSolution(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	submitResp, err := SubmitCorrectSolution(app)
 
-	if err != nil {
-		t.Errorf("Failed to submit solution: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(200, submitResp.StatusCode)
 
 	var submitResponseBody handlers.SubmitResponseBody
 
-	if err := json.NewDecoder(submitResp.Body).Decode(&submitResponseBody); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
+	err = json.NewDecoder(submitResp.Body).Decode(&submitResponseBody)
+
+	assert.Nil(err)
 
 	assert.True(submitResponseBody.Correct)
 
@@ -44,29 +40,23 @@ func TestSubmit_ReturnsA200ForIncorrectSolution(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	registerResp, err := RegisterSampleApplicant(app)
 
-	if err != nil {
-		t.Errorf("Failed to register applicant: %v", err)
-	}
+	assert.Nil(err)
 
 	submitResp, err := SubmitSolution(app, registerResp, []string{})
 
-	if err != nil {
-		t.Errorf("Failed to submit solution: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(200, submitResp.StatusCode)
 
 	var submitResponseBody handlers.SubmitResponseBody
 
-	if err := json.NewDecoder(submitResp.Body).Decode(&submitResponseBody); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
+	err = json.NewDecoder(submitResp.Body).Decode(&submitResponseBody)
+
+	assert.Nil(err)
 
 	assert.False(submitResponseBody.Correct)
 
@@ -77,38 +67,28 @@ func TestSubmit_ReturnsA400ForInvalidToken(t *testing.T) {
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	invalidToken := "foo"
 
 	body, err := json.Marshal([]string{})
 
-	if err != nil {
-		t.Errorf("Failed to marshal body: %v", err)
-	}
+	assert.Nil(err)
 
 	req := httptest.NewRequest("POST", fmt.Sprintf("%s/submit/%s", app.Address, invalidToken), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
-	if err != nil {
-		t.Errorf("Failed to execute request: %v", err)
-	}
+	assert.Nil(err)
 
 	submitResp, err := app.App.Test(req)
 
-	if err != nil {
-		t.Errorf("Failed to execute request: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(400, submitResp.StatusCode)
 
 	body, err = io.ReadAll(submitResp.Body)
 
-	if err != nil {
-		t.Errorf("Failed to read response body: %v", err)
-	}
+	assert.Nil(err)
 
 	responseString := string(body)
 
@@ -119,29 +99,23 @@ func TestSubmit_ReturnsIncorrectAfterSubmittingCorrectSolutionThenIncorrectSolut
 	assert := assert.New(t)
 	app, err := SpawnApp()
 
-	if err != nil {
-		t.Errorf("Failed to spawn app: %v", err)
-	}
+	assert.Nil(err)
 
 	nuid, err := domain.ParseNUID("002172052")
 
-	if err != nil {
-		t.Errorf("Failed to parse NUID: %v", err)
-	}
+	assert.Nil(err)
 
 	submitResp, err := SubmitCorrectSolutionWithNUID(app, *nuid)
 
-	if err != nil {
-		t.Errorf("Failed to submit solution: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(200, submitResp.StatusCode)
 
 	var submitCorrectResponseBody handlers.SubmitResponseBody
 
-	if err := json.NewDecoder(submitResp.Body).Decode(&submitCorrectResponseBody); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
+	err = json.NewDecoder(submitResp.Body).Decode(&submitCorrectResponseBody)
+
+	assert.Nil(err)
 
 	assert.True(submitCorrectResponseBody.Correct)
 
@@ -149,15 +123,11 @@ func TestSubmit_ReturnsIncorrectAfterSubmittingCorrectSolutionThenIncorrectSolut
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("%s/forgot_token/%s", app.Address, nuid), nil)
 
-	if err != nil {
-		t.Errorf("Failed to execute request: %v", err)
-	}
+	assert.Nil(err)
 
 	forgotTokenResp, err := app.App.Test(req)
 
-	if err != nil {
-		t.Errorf("Failed to execute request: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(200, forgotTokenResp.StatusCode)
 
@@ -169,17 +139,15 @@ func TestSubmit_ReturnsIncorrectAfterSubmittingCorrectSolutionThenIncorrectSolut
 
 	submitResp, err = SubmitSolutionWithToken(app, *token, []string{})
 
-	if err != nil {
-		t.Errorf("Failed to submit solution: %v", err)
-	}
+	assert.Nil(err)
 
 	assert.Equal(200, submitResp.StatusCode)
 
 	var submitResponseBody handlers.SubmitResponseBody
 
-	if err := json.NewDecoder(submitResp.Body).Decode(&submitResponseBody); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
+	err = json.NewDecoder(submitResp.Body).Decode(&submitResponseBody)
+
+	assert.Nil(err)
 
 	assert.False(submitResponseBody.Correct)
 

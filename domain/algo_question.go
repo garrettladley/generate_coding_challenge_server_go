@@ -123,28 +123,28 @@ func GenerateRandomInt(max int64) int64 {
 	return randInt.Int64()
 }
 
-func OneEditAway(str string) (Color, error) {
+func OneEditAway(str string) (*Color, error) {
 	result, err := oneEditAwayOnlyOneAnswer(str, Colors(), func(c Color) string {
 		s, _ := c.String()
 		return s
 	})
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	return result, nil
 }
 
-func oneEditAwayOnlyOneAnswer[T any](str string, iterable []T, toString func(T) string) (T, error) {
+func oneEditAwayOnlyOneAnswer[T any](str string, iterable []T, toString func(T) string) (*T, error) {
 	var defaultItem T
 
 	for _, item := range iterable {
 		if nEditsAway(str, toString(item), 1) {
-			return item, nil
+			return &item, nil
 		}
 	}
-	return defaultItem, fmt.Errorf("no valid answer found")
+	return &defaultItem, fmt.Errorf("no valid answer found")
 }
 
 func nEditsAway(str1, str2 string, n int) bool {
