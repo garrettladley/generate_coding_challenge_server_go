@@ -16,7 +16,7 @@ func TestParseNUID_ValidNUID(t *testing.T) {
 	result, err := domain.ParseNUID(nuidInput)
 
 	assert.Nil(err)
-	assert.Equal(result, domain.NUID(nuidInput))
+	assert.Equal(domain.NUID(nuidInput), &result)
 }
 
 func TestParseNUID_WhitespaceOnlyIsRejected(t *testing.T) {

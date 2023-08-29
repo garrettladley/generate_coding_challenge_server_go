@@ -16,7 +16,7 @@ func TestParseApplicantName_ValidName(t *testing.T) {
 	result, err := domain.ParseApplicantName(nameInput)
 
 	assert.Nil(err)
-	assert.Equal(result, domain.ApplicantName(nameInput))
+	assert.Equal(domain.ApplicantName(nameInput), &result)
 }
 
 func TestParseApplicantName_256GraphemeLongNameIsValid(t *testing.T) {
@@ -26,7 +26,7 @@ func TestParseApplicantName_256GraphemeLongNameIsValid(t *testing.T) {
 	result, err := domain.ParseApplicantName(nameInput)
 
 	assert.Nil(err)
-	assert.Equal(result, domain.ApplicantName(nameInput))
+	assert.Equal(domain.ApplicantName(nameInput), &result)
 }
 
 func TestParseApplicantName_NameLongerThan256GraphemesIsRejected(t *testing.T) {
