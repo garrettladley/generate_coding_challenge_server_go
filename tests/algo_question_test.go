@@ -45,12 +45,12 @@ func TestOneEditAwayExample(t *testing.T) {
 	result, err := domain.OneEditAway("red")
 
 	assert.Nil(err)
-	assert.Equal(domain.Red, &result)
+	assert.Equal(domain.Red, *result)
 
 	result, err = domain.OneEditAway("lue")
 
 	assert.Nil(err)
-	assert.Equal(domain.Blue, &result)
+	assert.Equal(domain.Blue, *result)
 
 	result, err = domain.OneEditAway("ooran")
 
@@ -65,5 +65,5 @@ func TestOneEditAwayExample(t *testing.T) {
 	result, err = domain.OneEditAway("greene")
 
 	assert.Nil(err)
-	assert.Equal(domain.Green, &result)
+	assert.Equal(domain.Green, *result)
 }

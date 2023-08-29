@@ -16,7 +16,7 @@ func TestParseNUID_ValidNUID(t *testing.T) {
 	result, err := domain.ParseNUID(nuidInput)
 
 	assert.Nil(err)
-	assert.Equal(domain.NUID(nuidInput), &result)
+	assert.Equal(domain.NUID(nuidInput), *result)
 }
 
 func TestParseNUID_WhitespaceOnlyIsRejected(t *testing.T) {
@@ -42,7 +42,7 @@ func TestParseNUID_EmptyStringIsRejected(t *testing.T) {
 func TestParseNUID_InvalidLengthIsRejected(t *testing.T) {
 	assert := assert.New(t)
 
-	nuidInput := strings.Repeat("1", 9)
+	nuidInput := strings.Repeat("1", 10)
 	result, err := domain.ParseNUID(nuidInput)
 
 	assert.Errorf(err, fmt.Sprintf("invalid NUID! Given: %s", nuidInput), "error message %s", "formatted")
