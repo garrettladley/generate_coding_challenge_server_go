@@ -102,6 +102,7 @@ func GetConfiguration() (Settings, error) {
 		return settings, nil
 	} else {
 		var prodSettings ProductionSettings
+
 		v.SetConfigName(string(environment))
 
 		if err := v.ReadInConfig(); err != nil {
