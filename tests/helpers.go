@@ -64,7 +64,6 @@ func SpawnApp() (TestApp, error) {
 	connectionWithDB, err := configureDatabase(configuration.Database)
 
 	if err != nil {
-		fmt.Print("foo")
 		return TestApp{}, err
 	}
 
